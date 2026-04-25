@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>A13 護理紀錄系統 v2</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 /* ═══════════════ CSS 變數 ═══════════════ */
 :root{
@@ -180,6 +181,10 @@ table.det td{text-align:center}
 table.det tbody tr:nth-child(even){background:#fafafa}
 table.det tbody tr:hover{background:#f0f4ff}
 .det-key{font-family:monospace;font-size:15px;color:var(--gray);font-weight:700}
+.time-inp{font-family:'Courier New',monospace;font-size:22px;font-weight:700;
+  letter-spacing:3px;text-align:center;color:var(--c0);background:#e0f7fa;
+  border:2px solid var(--c2) !important}
+.time-inp::placeholder{font-size:18px;letter-spacing:2px;color:#90a4ae;font-weight:400}
 .det-total td{font-weight:800;border-top:3px solid #546e7a !important}
 .det-feed-tot td{background:#ffe082 !important;color:#bf360c}
 .det-out-tot td{background:#a5d6a7 !important;color:#1b5e20}
@@ -278,7 +283,21 @@ html.m .btn-xs{padding:5px 10px;font-size:13px}
 html.m .btn-sm{padding:5px 12px;font-size:14px}
 html.m .id-badge{font-size:14px}
 
-/* ══════════ 數字九宮格 ══════════ */
+/* ══════════ Google Drive ══════════ */
+.gdrive-bar{background:linear-gradient(135deg,#1a73e8,#0d47a1);
+  color:#fff;padding:8px 20px;display:flex;align-items:center;
+  gap:10px;flex-wrap:wrap;font-size:13px}
+.gdrive-bar .gd-title{font-weight:800;display:flex;align-items:center;gap:6px}
+.gdrive-bar .gd-status{font-size:12px;opacity:.85;flex:1}
+.btn-gdrive{background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.5);
+  color:#fff;padding:5px 13px;border-radius:20px;cursor:pointer;
+  font-size:13px;font-weight:700;transition:.2s;display:inline-flex;align-items:center;gap:5px}
+.btn-gdrive:hover{background:rgba(255,255,255,.35)}
+.btn-gdrive:disabled{opacity:.45;cursor:not-allowed}
+.gd-user{display:flex;align-items:center;gap:7px}
+.gd-avatar{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.5)}
+.sync-spin{display:inline-block;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .np-wrap{display:none;position:fixed;inset:0;z-index:999999;
   align-items:flex-end;justify-content:center;
   background:rgba(0,0,0,.35)}
@@ -318,7 +337,7 @@ html.m .id-badge{font-size:14px}
     <small>三階關聯式資料管理 · XML 格式持久化儲存</small>
   </div>
   <div class="ver">v2.0</div>
-  <button class="dev-toggle" id="dev-btn" onclick="toggleDev()" title="切換桌機／手機模式">
+  <button type="button" class="dev-toggle" id="dev-btn" onclick="toggleDev()" title="切換桌機／手機模式">
     <span id="dev-icon">💻</span><span class="lbl" id="dev-lbl">桌機</span>
   </button>
 </header>
@@ -331,6 +350,19 @@ html.m .id-badge{font-size:14px}
   <div class="nav-tab" data-t="xml">💾 XML資料</div>
   <div class="nav-tab" data-t="sch">📐 架構說明</div>
 </nav>
+
+<!-- ══════ Google Drive 工具列 ══════ -->
+<div class="gdrive-bar" id="gd-bar">
+  <div class="gd-title">☁️ Google Drive 同步</div>
+  <div class="gd-status" id="gd-status">尚未登入 Google 帳號</div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+    <div id="gd-user-area"></div>
+    <button type="button" class="btn-gdrive" id="gd-login-btn" onclick="gdLogin()">🔐 Google 登入</button>
+    <button type="button" class="btn-gdrive" id="gd-save-btn" onclick="gdSave()" disabled>☁️ 存至 Drive</button>
+    <button type="button" class="btn-gdrive" id="gd-load-btn" onclick="gdLoad()" disabled>📂 從 Drive 讀取</button>
+    <button type="button" class="btn-gdrive" id="gd-logout-btn" onclick="gdLogout()" style="display:none">登出</button>
+  </div>
+</div>
 
 <!-- ══════ 麵包屑 ══════ -->
 <div class="bc-bar" id="bc-bar"></div>
@@ -345,9 +377,9 @@ html.m .id-badge{font-size:14px}
   <div class="pane on" id="pane-cal">
     <div class="cal-card">
       <div class="cal-hdr">
-        <button class="cal-btn" onclick="calMove(-1)">‹</button>
+        <button type="button" class="cal-btn" onclick="calMove(-1)">‹</button>
         <h2 id="cal-title"></h2>
-        <button class="cal-btn" onclick="calMove(1)">›</button>
+        <button type="button" class="cal-btn" onclick="calMove(1)">›</button>
       </div>
       <div class="cal-wk">
         <span>日</span><span>一</span><span>二</span><span>三</span>
@@ -386,8 +418,8 @@ html.m .id-badge{font-size:14px}
         <div class="fgroup"><label>紀錄編號（含）</label><input type="text" id="q-id" placeholder="如 20260425DA01"></div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-c1" onclick="doSearch()">🔍 查詢</button>
-        <button class="btn btn-gray" onclick="clearSearch()">清除</button>
+        <button type="button" class="btn btn-c1" onclick="doSearch()">🔍 查詢</button>
+        <button type="button" class="btn btn-gray" onclick="clearSearch()">清除</button>
       </div>
     </div>
     <div id="q-result"></div>
@@ -398,9 +430,9 @@ html.m .id-badge{font-size:14px}
     <div class="sec-bar">
       <h3 style="color:var(--c1)">💾 XML 原始資料</h3>
       <div class="btns">
-        <button class="btn btn-c1" onclick="showXML()">🔄 重新整理</button>
-        <button class="btn" style="background:#ef6c00;color:#fff" onclick="exportXML()">⬇ 匯出</button>
-        <button class="btn btn-red" onclick="clearAll()">🗑 清除全部</button>
+        <button type="button" class="btn btn-c1" onclick="showXML()">🔄 重新整理</button>
+        <button type="button" class="btn" style="background:#ef6c00;color:#fff" onclick="exportXML()">⬇ 匯出</button>
+        <button type="button" class="btn btn-red" onclick="clearAll()">🗑 清除全部</button>
       </div>
     </div>
     <div style="font-size:17px;color:var(--gray);margin-bottom:8px">
@@ -478,7 +510,7 @@ html.m .id-badge{font-size:14px}
 <div class="modal">
   <div class="modal-hdr" style="background:var(--c0)">
     <h3 id="rec-form-title">新增護理主檔記錄</h3>
-    <button class="cls" onclick="closeOv('ov-rec')">✕</button>
+    <button type="button" class="cls" onclick="closeOv('ov-rec')">✕</button>
   </div>
   <div class="modal-body">
     <div class="key-box">
@@ -511,8 +543,8 @@ html.m .id-badge{font-size:14px}
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-gray" onclick="closeOv('ov-rec')">取消</button>
-      <button class="btn btn-c1" onclick="saveRec()">💾 儲存主檔</button>
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-rec')">取消</button>
+      <button type="button" class="btn btn-c1" onclick="saveRec()">💾 儲存主檔</button>
     </div>
   </div>
 </div>
@@ -523,7 +555,7 @@ html.m .id-badge{font-size:14px}
 <div class="modal">
   <div class="modal-hdr" style="background:var(--bed-h)">
     <h3 id="bed-form-title">新增床號（第二階）</h3>
-    <button class="cls" onclick="closeOv('ov-bed')">✕</button>
+    <button type="button" class="cls" onclick="closeOv('ov-bed')">✕</button>
   </div>
   <div class="modal-body">
     <div class="key-box">
@@ -544,8 +576,8 @@ html.m .id-badge{font-size:14px}
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-gray" onclick="closeOv('ov-bed')">取消</button>
-      <button class="btn btn-bed" onclick="saveBed()">💾 儲存床號</button>
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-bed')">取消</button>
+      <button type="button" class="btn btn-bed" onclick="saveBed()">💾 儲存床號</button>
     </div>
   </div>
 </div>
@@ -556,7 +588,7 @@ html.m .id-badge{font-size:14px}
 <div class="modal">
   <div class="modal-hdr" style="background:var(--feed-h)">
     <h3 id="feed-form-title">🍼 新增餵食明細</h3>
-    <button class="cls" onclick="closeOv('ov-feed')">✕</button>
+    <button type="button" class="cls" onclick="closeOv('ov-feed')">✕</button>
   </div>
   <div class="modal-body">
     <div class="key-box" style="background:#2d1b00;color:#fab387">
@@ -567,7 +599,7 @@ html.m .id-badge{font-size:14px}
       <div class="fsec-hdr" style="background:var(--feed-h)">🍼 餵食資料</div>
       <div class="fsec-body" style="background:var(--feed-b)">
         <div class="fgrid">
-          <div class="fgroup"><label>時間</label><input type="time" id="ff-time"></div>
+          <div class="fgroup"><label>時間（24H）</label><input type="text" id="ff-time" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
           <div class="fgroup"><label>餵食奶 (ml)</label><input type="number" id="ff-milk" placeholder="0" oninput="calcFeedSub()"></div>
           <div class="fgroup"><label>餵食水 (ml)</label><input type="number" id="ff-fw" placeholder="0" oninput="calcFeedSub()"></div>
           <div class="fgroup"><label>高蛋白 (ml)</label><input type="number" id="ff-pro" placeholder="0" oninput="calcFeedSub()"></div>
@@ -581,8 +613,8 @@ html.m .id-badge{font-size:14px}
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-gray" onclick="closeOv('ov-feed')">取消</button>
-      <button class="btn btn-feed" onclick="saveFeed()">💾 儲存餵食明細</button>
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-feed')">取消</button>
+      <button type="button" class="btn btn-feed" onclick="saveFeed()">💾 儲存餵食明細</button>
     </div>
   </div>
 </div>
@@ -593,7 +625,7 @@ html.m .id-badge{font-size:14px}
 <div class="modal">
   <div class="modal-hdr" style="background:var(--out-h)">
     <h3 id="out-form-title">💧 新增排出明細</h3>
-    <button class="cls" onclick="closeOv('ov-out')">✕</button>
+    <button type="button" class="cls" onclick="closeOv('ov-out')">✕</button>
   </div>
   <div class="modal-body">
     <div class="key-box" style="background:#001a00;color:#a6e3a1">
@@ -604,7 +636,7 @@ html.m .id-badge{font-size:14px}
       <div class="fsec-hdr" style="background:var(--out-h)">💧 排出資料</div>
       <div class="fsec-body" style="background:var(--out-b)">
         <div class="fgrid">
-          <div class="fgroup"><label>時間</label><input type="time" id="of-time"></div>
+          <div class="fgroup"><label>時間（24H）</label><input type="text" id="of-time" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
           <div class="fgroup"><label>尿量 (ml)</label><input type="number" id="of-ur" placeholder="0"></div>
           <div class="fgroup"><label>屎量 (ml)</label><input type="number" id="of-st" placeholder="0"></div>
           <div class="fgroup"><label>尿與屎</label><input type="number" id="of-cb" placeholder="0"></div>
@@ -613,8 +645,8 @@ html.m .id-badge{font-size:14px}
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-gray" onclick="closeOv('ov-out')">取消</button>
-      <button class="btn btn-out" onclick="saveOut()">💾 儲存排出明細</button>
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-out')">取消</button>
+      <button type="button" class="btn btn-out" onclick="saveOut()">💾 儲存排出明細</button>
     </div>
   </div>
 </div>
@@ -625,7 +657,7 @@ html.m .id-badge{font-size:14px}
 <div class="modal">
   <div class="modal-hdr" style="background:var(--met-h)">
     <h3 id="met-form-title">⚖️ 新增體重腹圍明細</h3>
-    <button class="cls" onclick="closeOv('ov-met')">✕</button>
+    <button type="button" class="cls" onclick="closeOv('ov-met')">✕</button>
   </div>
   <div class="modal-body">
     <div class="key-box" style="background:#00003d;color:#74c7ec">
@@ -636,7 +668,7 @@ html.m .id-badge{font-size:14px}
       <div class="fsec-hdr" style="background:var(--met-h)">⚖️ 體重 / 翻身 / 腹圍</div>
       <div class="fsec-body" style="background:var(--met-b)">
         <div class="fgrid">
-          <div class="fgroup"><label>記錄時間</label><input type="time" id="mf-time"></div>
+          <div class="fgroup"><label>記錄時間（24H）</label><input type="text" id="mf-time" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
           <div class="fgroup"><label>體重 (kg)</label><input type="number" step="0.1" id="mf-wt" placeholder="0.0"></div>
           <div class="fgroup"><label>前次體重 (kg)</label><input type="number" step="0.1" id="mf-pw" placeholder="0.0"></div>
           <div class="fgroup"><label>翻身方向</label>
@@ -647,7 +679,7 @@ html.m .id-badge{font-size:14px}
               <option value="平躺">平躺</option>
             </select>
           </div>
-          <div class="fgroup"><label>翻身時間</label><input type="time" id="mf-tt"></div>
+          <div class="fgroup"><label>翻身時間（24H）</label><input type="text" id="mf-tt" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
           <div class="fgroup"><label>腹圍 (cm)</label><input type="number" step="0.1" id="mf-ab" placeholder="0.0"></div>
           <div class="fgroup"><label>尿袋標記</label>
             <select id="mf-ub">
@@ -660,8 +692,8 @@ html.m .id-badge{font-size:14px}
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-gray" onclick="closeOv('ov-met')">取消</button>
-      <button class="btn btn-met" onclick="saveMet()">💾 儲存體重腹圍明細</button>
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-met')">取消</button>
+      <button type="button" class="btn btn-met" onclick="saveMet()">💾 儲存體重腹圍明細</button>
     </div>
   </div>
 </div>
@@ -676,20 +708,20 @@ html.m .id-badge{font-size:14px}
     <div class="np-fieldname" id="np-field">數值輸入</div>
     <div class="np-disp" id="np-disp">0</div>
     <div class="np-grid">
-      <button class="np-key" onclick="npKey('7')">7</button>
-      <button class="np-key" onclick="npKey('8')">8</button>
-      <button class="np-key" onclick="npKey('9')">9</button>
-      <button class="np-key" onclick="npKey('4')">4</button>
-      <button class="np-key" onclick="npKey('5')">5</button>
-      <button class="np-key" onclick="npKey('6')">6</button>
-      <button class="np-key" onclick="npKey('1')">1</button>
-      <button class="np-key" onclick="npKey('2')">2</button>
-      <button class="np-key" onclick="npKey('3')">3</button>
-      <button class="np-key k-dot" onclick="npKey('.')">．</button>
-      <button class="np-key" onclick="npKey('0')">0</button>
-      <button class="np-key k-back" onclick="npBack()">⌫</button>
+      <button type="button" class="np-key" onclick="npKey('7')">7</button>
+      <button type="button" class="np-key" onclick="npKey('8')">8</button>
+      <button type="button" class="np-key" onclick="npKey('9')">9</button>
+      <button type="button" class="np-key" onclick="npKey('4')">4</button>
+      <button type="button" class="np-key" onclick="npKey('5')">5</button>
+      <button type="button" class="np-key" onclick="npKey('6')">6</button>
+      <button type="button" class="np-key" onclick="npKey('1')">1</button>
+      <button type="button" class="np-key" onclick="npKey('2')">2</button>
+      <button type="button" class="np-key" onclick="npKey('3')">3</button>
+      <button type="button" class="np-key k-dot" onclick="npKey('.')">．</button>
+      <button type="button" class="np-key" onclick="npKey('0')">0</button>
+      <button type="button" class="np-key k-back" onclick="npBack()">⌫</button>
     </div>
-    <button class="np-confirm" onclick="npDone()">✓ 確認</button>
+    <button type="button" class="np-confirm" onclick="npDone()">✓ 確認</button>
   </div>
 </div>
 
@@ -712,20 +744,51 @@ let DB=[];  // 主資料陣列
    資料存取
 ═══════════════════════════════════════ */
 async function load(){
-  try{const r=await window.storage.get('a13v3');if(r?.value)DB=fromXML(r.value);}
-  catch{DB=[];}
+  try{
+    const r=await window.storage.get('a13v3');
+    if(r?.value){
+      const parsed=fromXML(r.value);
+      if(parsed!==null){          // null = 解析錯誤
+        DB=parsed;
+        try{localStorage.setItem('a13v3_bak',r.value);}catch{}
+        return;
+      }
+    }
+    // window.storage 無資料或解析失敗 → 嘗試 localStorage 備份
+    const bak=localStorage.getItem('a13v3_bak');
+    if(bak){const p=fromXML(bak);if(p!==null)DB=p;}
+  }catch{
+    try{
+      const bak=localStorage.getItem('a13v3_bak');
+      if(bak){const p=fromXML(bak);if(p!==null)DB=p;}
+    }catch{DB=[];}
+  }
 }
 async function persist(){
-  try{await window.storage.set('a13v3',toXML(DB));}catch(e){console.error(e);}
+  if(!DB||DB.length===0){
+    // 若 DB 是空的，先確認 storage 也是空的才允許儲存，防止意外清空
+    try{
+      const r=await window.storage.get('a13v3');
+      if(r?.value&&r.value.includes('<record')){
+        console.warn('persist() 阻止：DB 為空但 storage 有資料，跳過儲存');
+        return; // 保護：不覆蓋有資料的 storage
+      }
+    }catch{}
+  }
+  const xml=toXML(DB);
+  try{await window.storage.set('a13v3',xml);}catch(e){console.error('storage 儲存失敗:',e);}
+  // 同步備份至 localStorage（雙保險）
+  try{localStorage.setItem('a13v3_bak',xml);}catch{}
 }
 
 /* ═══════════════════════════════════════
    XML 解析（三階）
 ═══════════════════════════════════════ */
 function fromXML(str){
+  if(!str||!str.includes('<record'))return []; // 確實是空資料
   try{
     const doc=new DOMParser().parseFromString(str,'text/xml');
-    if(doc.querySelector('parsererror'))return[];
+    if(doc.querySelector('parsererror')){console.error('XML 解析錯誤');return null;}
     return cels(doc.documentElement,'record').map(r=>({
       id:r.getAttribute('id')||'',
       date:ct(r,'date'),shift:ct(r,'shift'),group:ct(r,'group'),serial:ct(r,'serial'),
@@ -753,7 +816,7 @@ function fromXML(str){
         }))
       }))
     }));
-  }catch{return[];}
+  }catch(e){console.error('fromXML 例外:',e);return null;}
 }
 // DOM 輔助
 function ct(el,tag){for(const c of el.children)if(c.tagName===tag)return c.textContent;return'';}
@@ -914,13 +977,13 @@ function renderL1(){
   let h=`<div class="sec-bar">
     <h3 style="color:var(--c1)">📋 ${disp(S.date)} 護理主檔</h3>
     <div class="btns">
-      <button class="btn btn-c1" onclick="openRecForm()">＋ 新增主檔</button>
+      <button type="button" class="btn btn-c1" onclick="openRecForm()">＋ 新增主檔</button>
     </div>
   </div>`;
   if(!dayRecs.length){
     return h+`<div class="empty"><div class="icon">📄</div>
       <div>此日期尚無護理主檔記錄</div>
-      <div style="margin-top:10px"><button class="btn btn-c1" onclick="openRecForm()">＋ 新增第一筆</button></div></div>`;
+      <div style="margin-top:10px"><button type="button" class="btn btn-c1" onclick="openRecForm()">＋ 新增第一筆</button></div></div>`;
   }
   dayRecs.forEach(r=>{
     const bedCnt=r.beds?.length||0;
@@ -940,8 +1003,8 @@ function renderL1(){
         </div>
       </div>
       <div class="acts">
-        <button class="btn btn-c1 btn-xs" onclick="openRecForm('${r.id}')">✏ 修改</button>
-        <button class="btn btn-red btn-xs" onclick="delRec('${r.id}')">🗑</button>
+        <button type="button" class="btn btn-c1 btn-xs" onclick="openRecForm('${r.id}')">✏ 修改</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delRec('${r.id}')">🗑</button>
       </div>
     </div>`;
   });
@@ -959,13 +1022,13 @@ function renderL2(){
   let h=`<div class="sec-bar">
     <h3 style="color:var(--bed-h)">🛏 床號主檔 ／ ${r.id}</h3>
     <div class="btns">
-      <button class="btn btn-bed" onclick="openBedForm()">＋ 新增床號</button>
+      <button type="button" class="btn btn-bed" onclick="openBedForm()">＋ 新增床號</button>
     </div>
   </div>`;
 
   if(!beds.length){
     h+=`<div class="empty"><div class="icon">🛏</div><div>尚未新增任何床號</div>
-      <div style="margin-top:10px"><button class="btn btn-bed" onclick="openBedForm()">＋ 新增床號</button></div></div>`;
+      <div style="margin-top:10px"><button type="button" class="btn btn-bed" onclick="openBedForm()">＋ 新增床號</button></div></div>`;
     return h;
   }
 
@@ -1016,8 +1079,8 @@ function renderL2(){
       <td class="s-turn">${lm.turnDir||''} ${lm.turnTime||''}</td>
       <td class="s-abd">${lm.abdomen||''}</td><td>${lm.urineBag||''}</td>
       <td>
-        <button class="btn btn-c1 btn-xs" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">明細</button>
-        <button class="btn btn-red btn-xs" onclick="delBed('${b.id}')">🗑</button>
+        <button type="button" class="btn btn-c1 btn-xs" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">明細</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delBed('${b.id}')">🗑</button>
       </td>
     </tr>`;
   });
@@ -1037,8 +1100,8 @@ function renderL2(){
         </div>
       </div>
       <div class="acts">
-        <button class="btn btn-c1 btn-xs" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">明細 →</button>
-        <button class="btn btn-red btn-xs" onclick="delBed('${b.id}')">🗑</button>
+        <button type="button" class="btn btn-c1 btn-xs" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">明細 →</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delBed('${b.id}')">🗑</button>
       </div>
     </div>`;
   });
@@ -1075,7 +1138,7 @@ function renderL3(){
   h+=`<div class="dtab-panel feed-panel${S.dtab==='feed'?' on':''}" id="dp-feed">
     <div class="sec-bar">
       <h4 style="color:var(--feed-h)">🍼 餵食明細 (第三階-A)</h4>
-      <button class="btn btn-feed btn-sm" onclick="openFeedForm()">＋ 新增餵食</button>
+      <button type="button" class="btn btn-feed btn-sm" onclick="openFeedForm()">＋ 新增餵食</button>
     </div>
     ${renderFeedTable(bed)}
   </div>`;
@@ -1084,7 +1147,7 @@ function renderL3(){
   h+=`<div class="dtab-panel out-panel${S.dtab==='output'?' on':''}" id="dp-output">
     <div class="sec-bar">
       <h4 style="color:var(--out-h)">💧 排出明細 (第三階-B)</h4>
-      <button class="btn btn-out btn-sm" onclick="openOutForm()">＋ 新增排出</button>
+      <button type="button" class="btn btn-out btn-sm" onclick="openOutForm()">＋ 新增排出</button>
     </div>
     ${renderOutTable(bed)}
   </div>`;
@@ -1093,7 +1156,7 @@ function renderL3(){
   h+=`<div class="dtab-panel met-panel${S.dtab==='metric'?' on':''}" id="dp-metric">
     <div class="sec-bar">
       <h4 style="color:var(--met-h)">⚖️ 體重腹圍明細 (第三階-C)</h4>
-      <button class="btn btn-met btn-sm" onclick="openMetForm()">＋ 新增體重腹圍</button>
+      <button type="button" class="btn btn-met btn-sm" onclick="openMetForm()">＋ 新增體重腹圍</button>
     </div>
     ${renderMetTable(bed)}
   </div>`;
@@ -1109,7 +1172,7 @@ function renderFeedTable(bed){
       <th>鍵值 ID</th><th>序號</th><th>時間</th><th>奶(ml)</th><th>水(ml)</th>
       <th>高蛋白</th><th>藥+水</th><th>餵水</th><th>其他</th><th>小計</th><th>操作</th>
     </tr></thead><tbody>`;
-  rows.forEach(f=>{
+  rows.forEach((f,idx)=>{
     h+=`<tr>
       <td class="det-key">${f.id}</td>
       <td>${f.serial}</td><td>${f.feedTime}</td>
@@ -1118,8 +1181,8 @@ function renderFeedTable(bed){
       <td class="s-feed">${f.directFeed}</td><td class="s-feed">${f.otherFeed}</td>
       <td class="s-sub">${f.subtotal}</td>
       <td>
-        <button class="btn btn-feed btn-xs" onclick="openFeedForm('${f.id}')">✏️</button>
-        <button class="btn btn-red btn-xs" onclick="delFeed('${f.id}')">🗑</button>
+        <button type="button" class="btn btn-feed btn-xs" onclick="openFeedForm(${idx})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delFeed('${f.id}')">🗑</button>
       </td>
     </tr>`;
   });
@@ -1148,7 +1211,7 @@ function renderOutTable(bed){
       <th>鍵值 ID</th><th>序號</th><th>時間</th>
       <th>尿量(ml)</th><th>屎量(ml)</th><th>尿與屎</th><th>引流(ml)</th><th>操作</th>
     </tr></thead><tbody>`;
-  rows.forEach(o=>{
+  rows.forEach((o,idx)=>{
     h+=`<tr>
       <td class="det-key">${o.id}</td>
       <td>${o.serial}</td><td>${o.outputTime}</td>
@@ -1157,8 +1220,8 @@ function renderOutTable(bed){
       <td class="s-drain">${o.combined}</td>
       <td class="s-drain">${o.drain}</td>
       <td>
-        <button class="btn btn-out btn-xs" onclick="openOutForm('${o.id}')">✏️</button>
-        <button class="btn btn-red btn-xs" onclick="delOut('${o.id}')">🗑</button>
+        <button type="button" class="btn btn-out btn-xs" onclick="openOutForm(${idx})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delOut('${o.id}')">🗑</button>
       </td>
     </tr>`;
   });
@@ -1184,7 +1247,7 @@ function renderMetTable(bed){
       <th>體重</th><th>前次體重</th><th>翻身↑</th><th>翻身時間</th>
       <th>腹圍</th><th>尿袋</th><th>操作</th>
     </tr></thead><tbody>`;
-  rows.forEach(m=>{
+  rows.forEach((m,idx)=>{
     h+=`<tr>
       <td class="det-key">${m.id}</td>
       <td>${m.serial}</td><td>${m.metricTime}</td>
@@ -1192,8 +1255,8 @@ function renderMetTable(bed){
       <td class="s-turn">${m.turnDir}</td><td class="s-turn">${m.turnTime}</td>
       <td class="s-abd">${m.abdomen}</td><td>${m.urineBag}</td>
       <td>
-        <button class="btn btn-met btn-xs" onclick="openMetForm('${m.id}')">✏️</button>
-        <button class="btn btn-red btn-xs" onclick="delMet('${m.id}')">🗑</button>
+        <button type="button" class="btn btn-met btn-xs" onclick="openMetForm(${idx})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delMet('${m.id}')">🗑</button>
       </td>
     </tr>`;
   });
@@ -1307,12 +1370,13 @@ async function delBed(bid){
    CRUD：第三階-A（餵食明細）
 ═══════════════════════════════════════ */
 let editFeedId=null;
-function openFeedForm(fid){
-  editFeedId=fid||null;
+function openFeedForm(idx){
   const bed=findBed(S.recId,S.bedId);
-  const f=fid?bed?.feedDetails?.find(x=>x.id===fid):null;
-  document.getElementById('feed-form-title').textContent=fid?'🍼 修改餵食明細':'🍼 新增餵食明細';
-  document.getElementById('feed-id-preview').textContent=fid||`${S.bedId}F__（新增時產生）`;
+  // idx 有值=修改，undefined=新增
+  const f=(idx!==undefined&&idx!==null)?bed?.feedDetails?.[idx]??null:null;
+  editFeedId=f?f.id:null;
+  document.getElementById('feed-form-title').textContent=f?'🍼 修改餵食明細':'🍼 新增餵食明細';
+  document.getElementById('feed-id-preview').textContent=f?f.id:`${S.bedId}F__（新增時產生）`;
   document.getElementById('ff-time').value=f?.feedTime||'';
   document.getElementById('ff-milk').value=f?.milk||'';
   document.getElementById('ff-fw').value=f?.feedWater||'';
@@ -1360,12 +1424,12 @@ async function delFeed(fid){
    CRUD：第三階-B（排出明細）
 ═══════════════════════════════════════ */
 let editOutId=null;
-function openOutForm(oid){
-  editOutId=oid||null;
+function openOutForm(idx){
   const bed=findBed(S.recId,S.bedId);
-  const o=oid?bed?.outputDetails?.find(x=>x.id===oid):null;
-  document.getElementById('out-form-title').textContent=oid?'💧 修改排出明細':'💧 新增排出明細';
-  document.getElementById('out-id-preview').textContent=oid||`${S.bedId}O__（新增時產生）`;
+  const o=(idx!==undefined&&idx!==null)?bed?.outputDetails?.[idx]??null:null;
+  editOutId=o?o.id:null;
+  document.getElementById('out-form-title').textContent=o?'💧 修改排出明細':'💧 新增排出明細';
+  document.getElementById('out-id-preview').textContent=o?o.id:`${S.bedId}O__（新增時產生）`;
   document.getElementById('of-time').value=o?.outputTime||'';
   document.getElementById('of-ur').value=o?.urine||'';
   document.getElementById('of-st').value=o?.stool||'';
@@ -1400,12 +1464,12 @@ async function delOut(oid){
    CRUD：第三階-C（體重腹圍明細）
 ═══════════════════════════════════════ */
 let editMetId=null;
-function openMetForm(mid){
-  editMetId=mid||null;
+function openMetForm(idx){
   const bed=findBed(S.recId,S.bedId);
-  const m=mid?bed?.metricDetails?.find(x=>x.id===mid):null;
-  document.getElementById('met-form-title').textContent=mid?'⚖️ 修改體重腹圍明細':'⚖️ 新增體重腹圍明細';
-  document.getElementById('met-id-preview').textContent=mid||`${S.bedId}M__（新增時產生）`;
+  const m=(idx!==undefined&&idx!==null)?bed?.metricDetails?.[idx]??null:null;
+  editMetId=m?m.id:null;
+  document.getElementById('met-form-title').textContent=m?'⚖️ 修改體重腹圍明細':'⚖️ 新增體重腹圍明細';
+  document.getElementById('met-id-preview').textContent=m?m.id:`${S.bedId}M__（新增時產生）`;
   document.getElementById('mf-time').value=m?.metricTime||'';
   document.getElementById('mf-wt').value=m?.weight||'';
   document.getElementById('mf-pw').value=m?.prevWeight||'';
@@ -1473,8 +1537,8 @@ function doSearch(){
         <div class="row-sub">床號(${bedCnt})：${beds}</div>
       </div>
       <div class="acts">
-        <button class="btn btn-c1 btn-xs" onclick="S.date='${r.date}';goLevel(2,{recId:'${r.id}'})">進入 →</button>
-        <button class="btn btn-red btn-xs" onclick="delRec('${r.id}')">🗑</button>
+        <button type="button" class="btn btn-c1 btn-xs" onclick="S.date='${r.date}';goLevel(2,{recId:'${r.id}'})">進入 →</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delRec('${r.id}')">🗑</button>
       </div>
     </div>`;
   });
@@ -1555,10 +1619,26 @@ function setTree(){
 /* ═══════════════════════════════════════
    Modal 控制
 ═══════════════════════════════════════ */
-function openOv(id){document.getElementById(id).classList.add('on');}
+function openOv(id){
+  const ov = document.getElementById(id);
+  ov.classList.add('on');
+  // 阻止 modal 內的點擊冒泡到 overlay，防止觸發任何外層事件
+  const modal = ov.querySelector('.modal');
+  if(modal && !modal._stopSet){
+    modal._stopSet = true;
+    modal.addEventListener('click', e => e.stopPropagation());
+    modal.addEventListener('touchend', e => e.stopPropagation());
+  }
+  // 防止 Modal 內按 Enter 觸發按鈕
+  ov.querySelectorAll('input,select').forEach(el=>{
+    el.addEventListener('keydown', function(e){
+      if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); }
+    });
+  });
+}
 function closeOv(id){document.getElementById(id).classList.remove('on');}
-document.querySelectorAll('.ov').forEach(ov=>
-  ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('on');}));
+// 不設點擊背景關閉 Modal，防止編輯中誤觸導致資料消失
+// 使用者必須點 ✕ 或「取消」按鈕才能關閉
 
 /* ═══════════════════════════════════════
    Tab 切換
@@ -1609,12 +1689,16 @@ function toggleDev(){
 ═══════════════════════════════════════ */
 let npTarget = null;
 
+let npLocked = false;  // 九宮格鎖定旗標，防止 ghost click 後再次觸發
+
 // 事件代理：任何 number input 獲得焦點時顯示九宮格
 document.addEventListener('focusin', function(e){
+  if(npLocked) return;  // 鎖定期間不觸發
   const el = e.target;
   if(el && el.type === 'number'){
+    // 確認是在 Modal 內的欄位才顯示九宮格
+    if(!el.closest('.ov') && !el.closest('.np-box')) return;
     npTarget = el;
-    // 取得欄位標籤
     const lbl = el.closest('.fgroup')?.querySelector('label')?.textContent || '數值輸入';
     document.getElementById('np-field').textContent = lbl;
     document.getElementById('np-disp').textContent  = el.value || '0';
@@ -1651,8 +1735,209 @@ function npBack(){
 }
 
 function npDone(){
-  document.getElementById('np-wrap').classList.remove('on');
-  if(npTarget){ npTarget.blur(); npTarget = null; }
+  npLocked = true;
+  const wrap = document.getElementById('np-wrap');
+  wrap.style.pointerEvents = 'none';
+  wrap.classList.remove('on');
+
+  // ★ 關鍵修復：同時封鎖目前開著的 Modal 內容的點擊
+  //   ghost click 會穿透 np-wrap 打到 Modal 的 ✕ 或取消按鈕
+  document.querySelectorAll('.ov.on .modal').forEach(m=>{
+    m.style.pointerEvents = 'none';
+  });
+
+  setTimeout(()=>{
+    wrap.style.pointerEvents = '';
+    // 恢復 Modal 點擊
+    document.querySelectorAll('.ov .modal').forEach(m=>{
+      m.style.pointerEvents = '';
+    });
+    npTarget = null;
+    npLocked = false;
+  }, 500); // 延長至 500ms 確保 ghost click 過去
+}
+
+/* ═══════════════════════════════════════
+   24小時制時間自動格式化
+   輸入4個數字自動加冒號：0600 → 06:00
+═══════════════════════════════════════ */
+function timeFmt(el){
+  // 只保留數字與冒號
+  let v = el.value.replace(/[^0-9:]/g,'');
+  // 自動在第2位後加冒號
+  if(v.length >= 3 && !v.includes(':')){
+    v = v.slice(0,2) + ':' + v.slice(2);
+  }
+  // 最多5字元 HH:MM
+  el.value = v.slice(0,5);
+  // 填完5碼後驗證範圍
+  if(v.length === 5){
+    const [hh,mm] = v.split(':').map(Number);
+    if(hh > 23) el.value = '23:' + String(mm).padStart(2,'0');
+    if(mm > 59) el.value = v.slice(0,3) + '59';
+    el.style.borderColor = '#43a047';  // 綠色 = 有效
+  } else {
+    el.style.borderColor = '';
+  }
+}
+
+/* ═══════════════════════════════════════
+   Google Drive 整合
+   僅使用 client_id（前端安全）
+   Folder: 1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d
+═══════════════════════════════════════ */
+const GD = {
+  CLIENT_ID : '296426745832-ui6j8ksr8ntchk7ad6ibbne40cqld3g9.apps.googleusercontent.com',
+  FOLDER_ID : '1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d',
+  SCOPES    : 'https://www.googleapis.com/auth/drive.file',
+  FILENAME  : 'A13_NursingRecords.xml',
+  token     : null,   // access token
+  fileId    : null,   // Drive 上的檔案 ID
+};
+
+/* ── Google 登入（OAuth2 implicit flow）── */
+function gdLogin(){
+  if(!window.google){showMsg('Google 身份驗證尚未載入，請稍候再試','err');return;}
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id : GD.CLIENT_ID,
+    scope     : GD.SCOPES,
+    callback  : async(resp)=>{
+      if(resp.error){gdStatus('登入失敗：'+resp.error,'#ff8a80');return;}
+      GD.token = resp.access_token;
+      // 取得使用者資訊
+      try{
+        const ui = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+          {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
+        const area = document.getElementById('gd-user-area');
+        area.innerHTML = `<div class="gd-user">
+          ${ui.picture?`<img class="gd-avatar" src="${ui.picture}" alt="">`:''}
+          <span style="font-size:12px;font-weight:700">${ui.name||ui.email}</span>
+        </div>`;
+      }catch{}
+      document.getElementById('gd-login-btn').style.display='none';
+      document.getElementById('gd-logout-btn').style.display='';
+      document.getElementById('gd-save-btn').disabled=false;
+      document.getElementById('gd-load-btn').disabled=false;
+      gdStatus('✅ 已登入，可進行 Drive 同步','#b9f6ca');
+      // 自動查找既有檔案 ID
+      await gdFindFile();
+    }
+  });
+  client.requestAccessToken();
+}
+
+/* ── 登出 ── */
+function gdLogout(){
+  if(GD.token) google.accounts.oauth2.revoke(GD.token, ()=>{});
+  GD.token=null; GD.fileId=null;
+  document.getElementById('gd-login-btn').style.display='';
+  document.getElementById('gd-logout-btn').style.display='none';
+  document.getElementById('gd-save-btn').disabled=true;
+  document.getElementById('gd-load-btn').disabled=true;
+  document.getElementById('gd-user-area').innerHTML='';
+  gdStatus('已登出 Google 帳號','');
+}
+
+/* ── 狀態文字 ── */
+function gdStatus(msg, color){
+  const el=document.getElementById('gd-status');
+  el.textContent=msg;
+  el.style.color=color||'';
+}
+
+/* ── 尋找資料夾內既有的同名檔案 ── */
+async function gdFindFile(){
+  if(!GD.token) return;
+  try{
+    const q=encodeURIComponent(
+      `'${GD.FOLDER_ID}' in parents and name='${GD.FILENAME}' and trashed=false`);
+    const r=await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`,
+      {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
+    if(r.files&&r.files.length>0){
+      GD.fileId=r.files[0].id;
+      const mod=new Date(r.files[0].modifiedTime).toLocaleString('zh-TW');
+      gdStatus(`✅ 已登入 ｜ Drive 檔案：${GD.FILENAME}（最後修改：${mod}）`,'#b9f6ca');
+    }else{
+      gdStatus('✅ 已登入 ｜ Drive 尚無此檔案，儲存後將自動建立','#b9f6ca');
+    }
+  }catch(e){gdStatus('查找 Drive 檔案失敗：'+e.message,'#ff8a80');}
+}
+
+/* ── 儲存 XML 至 Drive ── */
+async function gdSave(){
+  if(!GD.token){showMsg('請先登入 Google','err');return;}
+  const btn=document.getElementById('gd-save-btn');
+  btn.innerHTML='<span class="sync-spin">🔄</span> 儲存中…';
+  btn.disabled=true;
+  try{
+    const xml=toXML(DB);
+    const blob=new Blob([xml],{type:'application/xml'});
+    let res;
+    if(GD.fileId){
+      // 更新既有檔案
+      res=await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${GD.fileId}?uploadType=media`,
+        {method:'PATCH',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/xml'},body:blob}
+      ).then(r=>r.json());
+    }else{
+      // 建立新檔案（含資料夾與名稱 metadata）
+      const meta=JSON.stringify({name:GD.FILENAME,parents:[GD.FOLDER_ID]});
+      const form=new FormData();
+      form.append('metadata',new Blob([meta],{type:'application/json'}));
+      form.append('file',blob);
+      res=await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+        {method:'POST',headers:{Authorization:'Bearer '+GD.token},body:form}
+      ).then(r=>r.json());
+      GD.fileId=res.id;
+    }
+    const now=new Date().toLocaleString('zh-TW');
+    gdStatus(`☁️ 已儲存至 Drive ｜ ${now}`,'#b9f6ca');
+    showMsg('✅ XML 已成功儲存至 Google Drive！','ok');
+  }catch(e){
+    gdStatus('❌ 儲存失敗：'+e.message,'#ff8a80');
+    showMsg('Google Drive 儲存失敗：'+e.message,'err');
+  }finally{
+    btn.innerHTML='☁️ 存至 Drive';
+    btn.disabled=false;
+  }
+}
+
+/* ── 從 Drive 讀取 XML ── */
+async function gdLoad(){
+  if(!GD.token){showMsg('請先登入 Google','err');return;}
+  if(!GD.fileId){
+    await gdFindFile();
+    if(!GD.fileId){showMsg('Drive 上尚無資料檔案，請先儲存一次','info');return;}
+  }
+  if(!confirm('從 Google Drive 讀取資料會覆蓋目前的本機資料，確定繼續？'))return;
+  const btn=document.getElementById('gd-load-btn');
+  btn.innerHTML='<span class="sync-spin">🔄</span> 讀取中…';
+  btn.disabled=true;
+  try{
+    const xml=await fetch(
+      `https://www.googleapis.com/drive/v3/files/${GD.fileId}?alt=media`,
+      {headers:{Authorization:'Bearer '+GD.token}}
+    ).then(r=>r.text());
+    const parsed=fromXML(xml);
+    if(parsed===null||parsed===undefined){
+      showMsg('Drive 上的 XML 格式有誤，無法載入','err');return;
+    }
+    DB=parsed;
+    await persist(); // 同步至本機儲存
+    drawCal();
+    if(S.lv>=1)renderContent();
+    const now=new Date().toLocaleString('zh-TW');
+    gdStatus(`📂 已從 Drive 讀取 ｜ ${now}`,'#b9f6ca');
+    showMsg(`✅ 已從 Drive 載入 ${DB.length} 筆主檔記錄！`,'ok');
+  }catch(e){
+    gdStatus('❌ 讀取失敗：'+e.message,'#ff8a80');
+    showMsg('Google Drive 讀取失敗：'+e.message,'err');
+  }finally{
+    btn.innerHTML='📂 從 Drive 讀取';
+    btn.disabled=false;
+  }
 }
 
 async function init(){
