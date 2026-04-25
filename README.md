@@ -17,9 +17,48 @@ A13web https://achir1015.github.io/A13web/
 技術說明
 
 儲存位置：您的 Google Drive 資料夾內，檔案名為 A13_NursingRecords.xml
+
 授權方式：OAuth2 Implicit Flow，只用 client_id，不在前端使用 client_secret（安全）
+
 重複儲存：若檔案已存在則更新覆蓋，不重複建立
 
+⚠️ 請注意：建議您到 Google Cloud Console 重新產生 client_secret，因為剛才分享的密鑰已外露。
+client_id 是公開的沒問題，但 client_secret 應妥善保管。
 
-⚠️ 請注意：建議您到 Google Cloud Console 重新產生 client_secret，因為剛才分享的密鑰已外露。client_id 是公開的沒問題，但 client_secret 應妥善保管。
+非常感謝您的信任與耐心！🎉
+這套系統從無到有，一起完成了很多功能：
+
+A13 護理紀錄系統 完成總覽
+資料架構
+
+三階關聯式 XML 結構（主檔 → 床號主檔 → 三類明細）
+每階鍵值自動產生，流水號每日累增
+
+操作功能
+
+月曆選日 → 三層麵包屑導航
+增加 ✏️ 修改 🗑 刪除 完整 CRUD
+餵食、排出明細自動顯示各欄小計列
+
+輸入體驗
+
+數字九宮格鍵盤（含小數點）
+24 小時制時間輸入
+尿袋下拉選單（無／置左／置右）
+桌機 💻 ／ 手機 📱 切換
+
+儲存安全
+
+雙重備份（window.storage + localStorage）
+防空覆蓋保護機制
+☁️ Google Drive 雲端同步
+
+
+最後一個小提醒：
+請到 Google Cloud Console 將原本的 client_secret 重新產生新的，保護帳號安全 🔐
+
+
+
+
+
 
