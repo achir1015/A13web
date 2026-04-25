@@ -1,4 +1,4 @@
-A13web https://achir1015.github.io/A13web/
+A13web護理紀錄系統 https://achir1015.github.io/A13web/
 <img width="1866" height="722" alt="image" src="https://github.com/user-attachments/assets/f892be94-7fa0-4252-aaef-fecf510310d4" />
 <img width="878" height="659" alt="image" src="https://github.com/user-attachments/assets/abf64bb4-31f6-4230-bc45-ff0a2d2bcbc0" />
 ⚠️ 重要提醒：client_secret 是機密資訊，請勿在公開場合分享，建議您事後至 Google Cloud Console 重新產生新的密鑰。
