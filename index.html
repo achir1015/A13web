@@ -325,6 +325,44 @@ html.m .id-badge{font-size:14px}
   color:#fff;border:none;border-radius:12px;font-size:20px;font-weight:800;
   padding:14px;cursor:pointer;transition:.18s;letter-spacing:1px}
 .np-confirm:active{filter:brightness(.9)}
+
+/* ══════════ 時間九宮格 ══════════ */
+.tp-wrap{display:none;position:fixed;inset:0;z-index:999999;
+  align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.4)}
+.tp-wrap.on{display:flex}
+.tp-box{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:360px;
+  padding:14px 14px 20px;box-shadow:0 -6px 32px rgba(0,0,0,.25);
+  animation:npSlide .2s ease-out}
+.tp-fieldname{font-size:13px;color:var(--gray);font-weight:700;
+  text-align:center;margin-bottom:6px}
+.tp-disp{background:#1e1e2e;border-radius:10px;padding:12px 16px;
+  margin-bottom:8px;display:flex;align-items:center;
+  justify-content:center;gap:6px}
+.tp-seg{font-family:monospace;font-size:38px;font-weight:800;
+  width:74px;text-align:center;border-radius:8px;padding:4px 0;transition:.15s}
+.tp-seg.active{background:var(--c1);color:#fff}
+.tp-seg.done{color:#a6e3a1}
+.tp-seg.empty{color:#455a64}
+.tp-colon{font-family:monospace;font-size:38px;font-weight:800;color:#546e7a}
+.tp-hint{font-size:13px;text-align:center;margin-bottom:10px;
+  font-weight:700;padding:4px 10px;border-radius:20px;display:inline-block}
+.tp-hint-wrap{text-align:center;margin-bottom:10px}
+.tp-hint.ph{background:#e3f2fd;color:#1565c0}
+.tp-hint.pm{background:#e8f5e9;color:#2e7d32}
+.tp-hint.err{background:#ffebee;color:#c62828}
+.tp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:9px}
+.tp-key{background:#e3f2fd;border:none;border-radius:10px;font-size:26px;
+  font-weight:800;padding:16px 8px;cursor:pointer;transition:.15s;
+  color:#1565c0;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+.tp-key:active{transform:scale(.93);background:var(--c1);color:#fff}
+.tp-key.tp-back{background:#fff3e0;color:var(--orange);font-size:22px}
+.tp-key.tp-clr{background:#ffebee;color:var(--red);font-size:15px;font-weight:800}
+.tp-confirm{width:100%;background:linear-gradient(135deg,var(--c0),var(--c1));
+  color:#fff;border:none;border-radius:12px;font-size:20px;font-weight:800;
+  padding:14px;cursor:pointer;transition:.18s}
+.tp-confirm:active{filter:brightness(.9)}
+.tp-confirm:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -722,6 +760,36 @@ html.m .id-badge{font-size:14px}
       <button type="button" class="np-key k-back" onclick="npBack()">⌫</button>
     </div>
     <button type="button" class="np-confirm" onclick="npDone()">✓ 確認</button>
+  </div>
+</div>
+
+<!-- ══════ 時間九宮格（24H制）══════ -->
+<div class="tp-wrap" id="tp-wrap">
+  <div class="tp-box">
+    <div class="tp-fieldname" id="tp-field">時間輸入（24小時制）</div>
+    <div class="tp-disp">
+      <div class="tp-seg empty" id="tp-hh">--</div>
+      <div class="tp-colon">:</div>
+      <div class="tp-seg empty" id="tp-mm">--</div>
+    </div>
+    <div class="tp-hint-wrap">
+      <span class="tp-hint ph" id="tp-hint">請輸入小時（00～23）</span>
+    </div>
+    <div class="tp-grid">
+      <button type="button" class="tp-key" onclick="tpKey('7')">7</button>
+      <button type="button" class="tp-key" onclick="tpKey('8')">8</button>
+      <button type="button" class="tp-key" onclick="tpKey('9')">9</button>
+      <button type="button" class="tp-key" onclick="tpKey('4')">4</button>
+      <button type="button" class="tp-key" onclick="tpKey('5')">5</button>
+      <button type="button" class="tp-key" onclick="tpKey('6')">6</button>
+      <button type="button" class="tp-key" onclick="tpKey('1')">1</button>
+      <button type="button" class="tp-key" onclick="tpKey('2')">2</button>
+      <button type="button" class="tp-key" onclick="tpKey('3')">3</button>
+      <button type="button" class="tp-key tp-clr" onclick="tpClear()">清除</button>
+      <button type="button" class="tp-key" onclick="tpKey('0')">0</button>
+      <button type="button" class="tp-key tp-back" onclick="tpBack()">⌫</button>
+    </div>
+    <button type="button" class="tp-confirm" id="tp-confirm" onclick="tpDone()" disabled>✓ 確認</button>
   </div>
 </div>
 
@@ -1689,20 +1757,23 @@ function toggleDev(){
 ═══════════════════════════════════════ */
 let npTarget = null;
 
-let npLocked = false;  // 九宮格鎖定旗標，防止 ghost click 後再次觸發
+let npLocked = false;
 
-// 事件代理：任何 number input 獲得焦點時顯示九宮格
+/* ── focusin：數字欄 → 數字九宮格 ／ 時間欄 → 時間九宮格 ── */
 document.addEventListener('focusin', function(e){
-  if(npLocked) return;  // 鎖定期間不觸發
+  if(npLocked) return;
   const el = e.target;
-  if(el && el.type === 'number'){
-    // 確認是在 Modal 內的欄位才顯示九宮格
-    if(!el.closest('.ov') && !el.closest('.np-box')) return;
+  if(!el.closest('.ov') && !el.closest('.np-box') && !el.closest('.tp-box')) return;
+
+  if(el.type === 'number'){
     npTarget = el;
     const lbl = el.closest('.fgroup')?.querySelector('label')?.textContent || '數值輸入';
     document.getElementById('np-field').textContent = lbl;
     document.getElementById('np-disp').textContent  = el.value || '0';
     document.getElementById('np-wrap').classList.add('on');
+  } else if(el.classList.contains('time-inp')){
+    const lbl = el.closest('.fgroup')?.querySelector('label')?.textContent || '時間輸入';
+    tpOpen(el, lbl);
   }
 });
 
@@ -1758,8 +1829,148 @@ function npDone(){
 }
 
 /* ═══════════════════════════════════════
-   24小時制時間自動格式化
-   輸入4個數字自動加冒號：0600 → 06:00
+   時間九宮格（24小時制）
+   階段 h：輸入小時 HH（00-23）
+   階段 m：輸入分鐘 MM（00-59）
+═══════════════════════════════════════ */
+let tpTarget = null;   // 目前綁定的 time-inp 欄位
+let tpBuf    = '';     // 輸入緩衝，最多 4 碼數字
+let tpPhase  = 'h';   // 'h'=輸入小時 / 'm'=輸入分鐘
+
+function tpOpen(el, lbl){
+  tpTarget = el;
+  tpBuf    = (el.value||'').replace(':',''); // 還原成4碼數字
+  tpPhase  = 'h';
+  document.getElementById('tp-field').textContent = lbl;
+  // 若已有值就載入
+  if(tpBuf.length===4){
+    const hh=tpBuf.slice(0,2), mm=tpBuf.slice(2,4);
+    if(parseInt(hh)<=23 && parseInt(mm)<=59){
+      tpPhase='m';
+    } else {
+      tpBuf='';
+    }
+  } else {
+    tpBuf='';
+  }
+  tpRender();
+  document.getElementById('tp-wrap').classList.add('on');
+}
+
+function tpRender(){
+  const hhEl = document.getElementById('tp-hh');
+  const mmEl = document.getElementById('tp-mm');
+  const hint = document.getElementById('tp-hint');
+  const conf = document.getElementById('tp-confirm');
+
+  const hh = tpBuf.slice(0,2).padEnd(2,'_');
+  const mm = tpBuf.slice(2,4).padEnd(2,'_');
+
+  // 小時顯示
+  if(tpBuf.length>=2){
+    hhEl.textContent=tpBuf.slice(0,2);
+    hhEl.className='tp-seg done';
+  } else if(tpBuf.length>0){
+    hhEl.textContent=tpBuf.slice(0,1)+'_';
+    hhEl.className='tp-seg active';
+  } else {
+    hhEl.textContent='--';
+    hhEl.className='tp-seg '+(tpPhase==='h'?'active':'empty');
+  }
+
+  // 分鐘顯示
+  if(tpBuf.length>=4){
+    mmEl.textContent=tpBuf.slice(2,4);
+    mmEl.className='tp-seg done';
+  } else if(tpBuf.length===3){
+    mmEl.textContent=tpBuf.slice(2,3)+'_';
+    mmEl.className='tp-seg active';
+  } else {
+    mmEl.textContent='--';
+    mmEl.className='tp-seg '+(tpPhase==='m'?'active':'empty');
+  }
+
+  // 提示文字
+  if(tpPhase==='h'){
+    hint.textContent='請輸入小時（00 ～ 23）';
+    hint.className='tp-hint ph';
+  } else {
+    hint.textContent='請輸入分鐘（00 ～ 59）';
+    hint.className='tp-hint pm';
+  }
+
+  // 確認按鈕：滿4碼且值合法才啟用
+  const ok = tpBuf.length===4 &&
+             parseInt(tpBuf.slice(0,2))<=23 &&
+             parseInt(tpBuf.slice(2,4))<=59;
+  conf.disabled = !ok;
+}
+
+function tpKey(k){
+  if(tpPhase==='h'){
+    if(tpBuf.length>=2) return; // 小時已滿
+    const next = tpBuf + k;
+    // 即時合法性提示（超過23禁止）
+    if(next.length===2 && parseInt(next)>23){
+      document.getElementById('tp-hint').textContent='小時不可超過 23！';
+      document.getElementById('tp-hint').className='tp-hint err';
+      return;
+    }
+    tpBuf = next;
+    if(tpBuf.length===2) tpPhase='m'; // 小時完成，切換到分鐘
+  } else {
+    if(tpBuf.length>=4) return; // 分鐘已滿
+    const mm = tpBuf.slice(2) + k;
+    if(mm.length===2 && parseInt(mm)>59){
+      document.getElementById('tp-hint').textContent='分鐘不可超過 59！';
+      document.getElementById('tp-hint').className='tp-hint err';
+      return;
+    }
+    tpBuf = tpBuf.slice(0,2) + mm;
+  }
+  tpRender();
+}
+
+function tpBack(){
+  if(tpBuf.length===0) return;
+  tpBuf = tpBuf.slice(0,-1);
+  // 退回到小時階段
+  if(tpBuf.length<2) tpPhase='h';
+  else if(tpBuf.length===2) tpPhase='m';
+  tpRender();
+}
+
+function tpClear(){
+  tpBuf=''; tpPhase='h'; tpRender();
+}
+
+function tpDone(){
+  if(tpTarget && tpBuf.length===4){
+    const val=tpBuf.slice(0,2)+':'+tpBuf.slice(2,4);
+    tpTarget.value=val;
+    tpTarget.style.borderColor='#43a047';
+    tpTarget.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  npLocked=true;
+  const wrap=document.getElementById('tp-wrap');
+  wrap.style.pointerEvents='none';
+  wrap.classList.remove('on');
+  document.querySelectorAll('.ov.on .modal').forEach(m=>m.style.pointerEvents='none');
+  setTimeout(()=>{
+    wrap.style.pointerEvents='';
+    document.querySelectorAll('.ov .modal').forEach(m=>m.style.pointerEvents='');
+    tpTarget=null; tpBuf=''; tpPhase='h';
+    npLocked=false;
+  },500);
+}
+
+// 時間九宮格防 mousedown 失焦
+document.getElementById('tp-wrap').addEventListener('mousedown',function(e){
+  if(e.target!==this) e.preventDefault();
+});
+
+/* ═══════════════════════════════════════
+   24小時制時間自動格式化（手動輸入仍保留）
 ═══════════════════════════════════════ */
 function timeFmt(el){
   // 只保留數字與冒號
