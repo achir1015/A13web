@@ -12,6 +12,9 @@ A13web護理紀錄系統 https://achir1015.github.io/A13web/
 加入 Google Drive 相關 CSS：加入Google Drive UI的CSS樣式加入Google Drive UI的CSS樣式加入 
 Google Drive 工具列 HTML（放在 nav 下方）：在nav下方加入Google Drive工具列
 在nav下方加入Google Drive工具列加入 Google Drive JS（放在 init() 前）：Ran 2 commands, edited a file, read a fileRan 2 commands, edited a file, read a fileGoogle Drive 整合已加入！
+<img width="1894" height="1033" alt="{92B00D87-1E65-44A0-936A-0052E597BF01}" src="https://github.com/user-attachments/assets/ff8dfa11-dcd5-4b97-872c-d93c858c6ff0" />
+
+
 操作說明：
 使用方式
 頁面頂端出現藍色 Google Drive 同步工具列：
