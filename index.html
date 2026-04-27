@@ -850,8 +850,45 @@ async function persist(){
 }
 
 /* ═══════════════════════════════════════
-   XML 解析（三階）
+   資料修復：修正舊格式錯誤的 ID 與 serial
+   舊格式：20260428NB018202001（缺少類型碼 F/O/M）
+   新格式：20260428NB018202O01（含類型碼）
 ═══════════════════════════════════════ */
+async function migrateDB(){
+  let changed = false;
+  DB.forEach(r => {
+    (r.beds||[]).forEach(b => {
+      // ── 餵食明細 ──
+      (b.feedDetails||[]).forEach((f, i) => {
+        const sn = String(i+1).padStart(2,'0');
+        const correctId = mkFeedId(b.id, sn);
+        if(f.id !== correctId || f.serial !== sn){
+          f.id = correctId; f.serial = sn; changed = true;
+        }
+      });
+      // ── 排出明細 ──
+      (b.outputDetails||[]).forEach((o, i) => {
+        const sn = String(i+1).padStart(2,'0');
+        const correctId = mkOutId(b.id, sn);
+        if(o.id !== correctId || o.serial !== sn){
+          o.id = correctId; o.serial = sn; changed = true;
+        }
+      });
+      // ── 體重腹圍明細 ──
+      (b.metricDetails||[]).forEach((m, i) => {
+        const sn = String(i+1).padStart(2,'0');
+        const correctId = mkMetId(b.id, sn);
+        if(m.id !== correctId || m.serial !== sn){
+          m.id = correctId; m.serial = sn; changed = true;
+        }
+      });
+    });
+  });
+  if(changed){
+    await persist(); // 修正後立即儲存
+    console.log('migrateDB：已修正舊格式 ID 並重新儲存');
+  }
+}
 function fromXML(str){
   if(!str||!str.includes('<record'))return []; // 確實是空資料
   try{
@@ -2135,7 +2172,8 @@ async function gdLoad(){
       showMsg('Drive 上的 XML 格式有誤，無法載入','err');return;
     }
     DB=parsed;
-    await persist(); // 同步至本機儲存
+    await migrateDB(); // 修復舊格式
+    await persist();
     drawCal();
     if(S.lv>=1)renderContent();
     const now=new Date().toLocaleString('zh-TW');
@@ -2155,6 +2193,7 @@ async function init(){
   calY=now.getFullYear();calM=now.getMonth();
   S.date=td2s(now);
   await load();
+  await migrateDB(); // 修復舊格式 ID 與 serial
   drawCal();
   fillQBeds();
   fillBedSelect();
