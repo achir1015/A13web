@@ -942,13 +942,12 @@ function xe(v){if(!v&&v!==0)return '';return String(v)
 /* ═══════════════════════════════════════
    流水號（每日/每床分開計數）
 ═══════════════════════════════════════ */
-async function nextSN(key){
-  let n=0;
-  try{const r=await window.storage.get('sn_'+key);if(r?.value)n=parseInt(r.value)||0;}catch{}
-  n++;
-  try{await window.storage.set('sn_'+key,String(n));}catch{}
-  return String(n).padStart(2,'0');
-}
+/* ── 序號：直接從陣列長度計算，最可靠 ── */
+function nextFeedSN(bed){ return String((bed.feedDetails||[]).length+1).padStart(2,'0'); }
+function nextOutSN(bed){  return String((bed.outputDetails||[]).length+1).padStart(2,'0'); }
+function nextMetSN(bed){  return String((bed.metricDetails||[]).length+1).padStart(2,'0'); }
+// 主檔序號仍用當日已有筆數+1
+function nextRecSN(date){ return String(DB.filter(r=>r.date===date).length+1).padStart(2,'0'); }
 // ID 工廠
 function mkRecId(d,sh,gr,sn){return d.replace(/-/g,'')+sh+gr+sn;}
 function mkBedId(rid,bed){return rid+bed;}
@@ -1375,7 +1374,7 @@ async function saveRec(){
     }
     showMsg(`主檔 ${editRecId} 已更新`,'ok');
   }else{
-    const sn=await nextSN('rec_'+date.replace(/-/g,''));
+    const sn=nextRecSN(date);
     const id=mkRecId(date,shift,group,sn);
     DB.push({id,date,shift,group,serial:sn,nurseName,unit,empNo,
       createdAt:now,updatedAt:now,beds:[]});
@@ -1474,7 +1473,7 @@ async function saveFeed(){
     if(f)Object.assign(f,data);
     showMsg(`餵食明細 ${editFeedId} 已更新`,'ok');
   }else{
-    const sn=await nextSN('feed_'+S.bedId);
+    const sn=nextFeedSN(bed);
     const id=mkFeedId(S.bedId,sn);
     bed.feedDetails.push({id,serial:sn,...data});
     showMsg(`餵食明細 ${id} 已新增`,'ok');
@@ -1514,7 +1513,7 @@ async function saveOut(){
     if(o)Object.assign(o,data);
     showMsg(`排出明細 ${editOutId} 已更新`,'ok');
   }else{
-    const sn=await nextSN('out_'+S.bedId);
+    const sn=nextOutSN(bed);
     const id=mkOutId(S.bedId,sn);
     bed.outputDetails.push({id,serial:sn,...data});
     showMsg(`排出明細 ${id} 已新增`,'ok');
@@ -1557,7 +1556,7 @@ async function saveMet(){
     if(m)Object.assign(m,data);
     showMsg(`體重腹圍明細 ${editMetId} 已更新`,'ok');
   }else{
-    const sn=await nextSN('met_'+S.bedId);
+    const sn=nextMetSN(bed);
     const id=mkMetId(S.bedId,sn);
     bed.metricDetails.push({id,serial:sn,...data});
     showMsg(`體重腹圍明細 ${id} 已新增`,'ok');
