@@ -2220,7 +2220,7 @@ function timeFmt(el){
 const GD = {
   CLIENT_ID   : '296426745832-ui6j8ksr8ntchk7ad6ibbne40cqld3g9.apps.googleusercontent.com',
   ROOT_ID     : '1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d', // 根資料夾
-  SCOPES      : 'https://www.googleapis.com/auth/drive.file',
+  SCOPES      : 'https://www.googleapis.com/auth/drive',
   MAIN_FILE   : 'A13_NursingRecords.xml',  // 護理主檔（存根資料夾）
   SETUP_FILE  : 'Setup.xml',
   CG_FILE     : 'Caregivers.xml',
@@ -2231,43 +2231,74 @@ const GD = {
   fileIds     : {},     // { setup, cg, ward } 各設定檔 ID
 };
 
-/* ── 驗證機構英文名稱與單位英文名稱不能為空白 ── */
+/* ── 驗證機構英文名稱與單位英文名稱不能為空白 ──
+   同時從表單欄位讀取（若 SETUP 物件未儲存也能正確取值）── */
 function gdCheckSetup(){
-  const hn=SETUP.hospitalNameEn.trim();
-  const un=SETUP.unitNameEn.trim();
+  // 優先讀 SETUP 物件，若空則嘗試從表單欄位讀取
+  let hn = (SETUP.hospitalNameEn||'').trim();
+  let un = (SETUP.unitNameEn||'').trim();
+
+  // 若 SETUP 物件是空的，嘗試從目前表單欄位同步
+  if(!hn){
+    const el=document.getElementById('su-hn-en');
+    if(el) hn=el.value.trim();
+  }
+  if(!un){
+    const el=document.getElementById('su-un-en');
+    if(el) un=el.value.trim();
+  }
+
   if(!hn && !un){
-    showMsg('⚠️ 存取前請先至「⚙️ 系統設定」填入【機構英文名稱】與【單位英文名稱】！','err');
+    showMsg('⚠️ 請先至「⚙️ 系統設定」填入【機構英文名稱】與【單位英文名稱】後按儲存設定！','err');
+    goTab('setup');
     return null;
   }
   if(!hn){
     showMsg('⚠️ 請先至「⚙️ 系統設定」填入【機構英文名稱】，不可空白！','err');
+    goTab('setup');
     return null;
   }
   if(!un){
     showMsg('⚠️ 請先至「⚙️ 系統設定」填入【單位英文名稱】，不可空白！','err');
+    goTab('setup');
     return null;
   }
-  // 子資料夾名稱：hospitalNameEn + "-" + unitNameEn
+  // 同步回 SETUP 物件（確保後續操作可用）
+  SETUP.hospitalNameEn = hn;
+  SETUP.unitNameEn = un;
   return `${hn}-${un}`;
 }
 
 /* ── 取得或建立子資料夾 ── */
 async function gdGetOrCreateSubFolder(subName){
-  // 先查找
+  // 先查找是否已存在
   const q=encodeURIComponent(
     `'${GD.ROOT_ID}' in parents and name='${subName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  const r=await fetch(
+  const listRes=await fetch(
     `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,
-    {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
-  if(r.files && r.files.length>0){
-    return r.files[0].id;
+    {headers:{Authorization:'Bearer '+GD.token}});
+  const listData=await listRes.json();
+  console.log('gdGetOrCreateSubFolder list:', listData);
+
+  if(listData.files && listData.files.length>0){
+    console.log('子資料夾已存在:', listData.files[0].id);
+    return listData.files[0].id;
   }
+
   // 不存在則建立
-  const meta={name:subName,mimeType:'application/vnd.google-apps.folder',parents:[GD.ROOT_ID]};
-  const created=await fetch('https://www.googleapis.com/drive/v3/files?fields=id,name',
-    {method:'POST',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/json'},
-     body:JSON.stringify(meta)}).then(r=>r.json());
-  return created.id;
+  console.log('建立新子資料夾:', subName);
+  const meta={name:subName, mimeType:'application/vnd.google-apps.folder', parents:[GD.ROOT_ID]};
+  const createRes=await fetch('https://www.googleapis.com/drive/v3/files?fields=id,name',
+    {method:'POST',
+     headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/json'},
+     body:JSON.stringify(meta)});
+  const createData=await createRes.json();
+  console.log('建立子資料夾結果:', createData);
+
+  if(!createData.id){
+    throw new Error('建立子資料夾失敗：'+JSON.stringify(createData));
+  }
+  return createData.id;
 }
 
 /* ── 在指定資料夾尋找或建立 XML 檔案，回傳 {id, exists} ── */
@@ -2286,24 +2317,28 @@ async function gdFindOrCreateFile(folderId, filename){
 /* ── 上傳單一 XML（更新或新建）── */
 async function gdUploadFile(fileId, folderId, filename, content){
   const blob=new Blob([content],{type:'application/xml'});
+  let res;
   if(fileId){
-    // 更新
-    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
-      {method:'PATCH',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/xml'},body:blob}
-    ).then(r=>r.json());
-    return fileId;
+    // 更新既有檔案
+    const r=await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+      {method:'PATCH',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/xml'},body:blob});
+    res=await r.json();
+    console.log(`更新 ${filename}:`, res);
   }else{
-    // 新建
+    // 新建檔案
     const meta=JSON.stringify({name:filename,parents:[folderId]});
     const form=new FormData();
     form.append('metadata',new Blob([meta],{type:'application/json'}));
     form.append('file',blob);
-    const res=await fetch(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-      {method:'POST',headers:{Authorization:'Bearer '+GD.token},body:form}
-    ).then(r=>r.json());
-    return res.id;
+    const r=await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+      {method:'POST',headers:{Authorization:'Bearer '+GD.token},body:form});
+    res=await r.json();
+    console.log(`新建 ${filename}:`, res);
   }
+  if(!res.id) throw new Error(`${filename} 上傳失敗：${JSON.stringify(res)}`);
+  return res.id;
 }
 
 /* ── 下載單一 XML ── */
