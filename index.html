@@ -425,6 +425,15 @@ html.m .id-badge{font-size:14px}
     <button type="button" class="btn-gdrive" id="gd-load-btn" onclick="gdLoad()" disabled>📂 從 Drive 讀取</button>
     <button type="button" class="btn-gdrive" id="gd-logout-btn" onclick="gdLogout()" style="display:none">登出</button>
   </div>
+  <!-- 第三列：本機資料夾（File System Access API）-->
+  <div class="gd-row2" id="fs-row">
+    <div class="gd-title">🗂 本機資料夾同步</div>
+    <div class="gd-status" id="fs-status">尚未選擇本機資料夾</div>
+    <button type="button" class="btn-gdrive" id="fs-pick-btn" onclick="fsPick()">📂 選擇資料夾</button>
+    <button type="button" class="btn-gdrive" id="fs-save-btn" onclick="fsSaveAll()" disabled>💾 存至資料夾</button>
+    <button type="button" class="btn-gdrive" id="fs-load-btn" onclick="fsLoadAll()" disabled>📥 從資料夾讀取</button>
+    <div id="fs-support-note" style="font-size:11px;opacity:.7"></div>
+  </div>
 </div>
 
 <!-- ══════ 麵包屑 ══════ -->
@@ -2704,12 +2713,154 @@ async function delWard(idx){
   showMsg(`病房 ${w.wardNo} 已刪除`,'ok');
 }
 
+/* ═══════════════════════════════════════
+   本機資料夾同步（File System Access API）
+   支援 Chrome / Edge 86+
+   四個 XML 與 HTML 放在同一資料夾
+═══════════════════════════════════════ */
+const FS = {
+  dirHandle : null,   // 已選定的資料夾句柄
+  FILES : {
+    main  : 'A13_NursingRecords.xml',
+    setup : 'Setup.xml',
+    cg    : 'Caregivers.xml',
+    ward  : 'Ward.xml'
+  }
+};
+
+function fsSupported(){
+  return ('showDirectoryPicker' in window);
+}
+
+function fsInit(){
+  const note=document.getElementById('fs-support-note');
+  if(!fsSupported()){
+    document.getElementById('fs-pick-btn').disabled=true;
+    if(note) note.textContent='（本瀏覽器不支援，請使用 Chrome / Edge）';
+    return;
+  }
+  if(note) note.textContent='';
+  // 嘗試從 localStorage 還原上次資料夾名稱（句柄無法持久化，只顯示名稱）
+  const savedName=localStorage.getItem('fs_dir_name');
+  if(savedName) document.getElementById('fs-status').textContent=
+    `上次資料夾：${savedName}（請重新選擇以恢復連接）`;
+}
+
+/* 選擇資料夾 */
+async function fsPick(){
+  if(!fsSupported()){showMsg('本瀏覽器不支援本機資料夾，請使用 Chrome / Edge','err');return;}
+  try{
+    FS.dirHandle = await window.showDirectoryPicker({mode:'readwrite'});
+    const name=FS.dirHandle.name;
+    localStorage.setItem('fs_dir_name', name);
+    document.getElementById('fs-status').textContent=`✅ 已選定：${name}`;
+    document.getElementById('fs-save-btn').disabled=false;
+    document.getElementById('fs-load-btn').disabled=false;
+    // 更新儲存位置顯示
+    const ptEl=document.getElementById('gd-loc-path');
+    if(ptEl){
+      ptEl.textContent=`本機資料夾：${name}`;
+      ptEl.title=`本機資料夾：${name}`;
+    }
+    showMsg(`已選定資料夾「${name}」，可開始讀寫 XML 檔案`,'ok');
+  }catch(e){
+    if(e.name!=='AbortError') showMsg('選擇資料夾失敗：'+e.message,'err');
+  }
+}
+
+/* 寫入單一 XML 檔 */
+async function fsWriteFile(filename, content){
+  if(!FS.dirHandle) throw new Error('尚未選擇資料夾');
+  const fh=await FS.dirHandle.getFileHandle(filename,{create:true});
+  const w=await fh.createWritable();
+  await w.write(content);
+  await w.close();
+}
+
+/* 讀取單一 XML 檔 */
+async function fsReadFile(filename){
+  if(!FS.dirHandle) throw new Error('尚未選擇資料夾');
+  try{
+    const fh=await FS.dirHandle.getFileHandle(filename);
+    const f=await fh.getFile();
+    return await f.text();
+  }catch(e){
+    if(e.name==='NotFoundError') return null; // 檔案不存在
+    throw e;
+  }
+}
+
+/* 儲存全部四個 XML 至資料夾 */
+async function fsSaveAll(){
+  if(!FS.dirHandle){showMsg('請先選擇資料夾','err');return;}
+  const btn=document.getElementById('fs-save-btn');
+  btn.innerHTML='<span class="sync-spin">🔄</span> 儲存中…';
+  btn.disabled=true;
+  try{
+    await fsWriteFile(FS.FILES.main,   toXML(DB));
+    await fsWriteFile(FS.FILES.setup,  setupToXML());
+    await fsWriteFile(FS.FILES.cg,     cgToXML());
+    await fsWriteFile(FS.FILES.ward,   wardToXML());
+    const now=new Date().toLocaleString('zh-TW');
+    document.getElementById('fs-status').textContent=
+      `✅ 已儲存至「${FS.dirHandle.name}」 ｜ ${now}`;
+    showMsg(`✅ 四個 XML 已全部儲存至資料夾「${FS.dirHandle.name}」`,'ok');
+  }catch(e){
+    showMsg('儲存失敗：'+e.message,'err');
+  }finally{
+    btn.innerHTML='💾 存至資料夾';btn.disabled=false;
+  }
+}
+
+/* 從資料夾讀取全部四個 XML */
+async function fsLoadAll(){
+  if(!FS.dirHandle){showMsg('請先選擇資料夾','err');return;}
+  if(!confirm(`從資料夾「${FS.dirHandle.name}」讀取所有 XML？\n目前資料將被覆蓋。`))return;
+  const btn=document.getElementById('fs-load-btn');
+  btn.innerHTML='<span class="sync-spin">🔄</span> 讀取中…';
+  btn.disabled=true;
+  try{
+    let loaded=[];
+    // 主資料
+    const mainXml=await fsReadFile(FS.FILES.main);
+    if(mainXml){
+      const p=fromXML(mainXml);
+      if(p!==null){DB=p;await migrateDB();await persist();loaded.push('A13_NursingRecords.xml');}
+    }
+    // Setup
+    const setupXml=await fsReadFile(FS.FILES.setup);
+    if(setupXml){parseSetupXML(setupXml);await persistSetup();loaded.push('Setup.xml');}
+    // Caregivers
+    const cgXml=await fsReadFile(FS.FILES.cg);
+    if(cgXml){parseCgXML(cgXml);await persistCg();loaded.push('Caregivers.xml');}
+    // Ward
+    const wardXml=await fsReadFile(FS.FILES.ward);
+    if(wardXml){parseWardXML(wardXml);await persistWard();loaded.push('Ward.xml');}
+
+    // 更新介面
+    updateAppBarInfo();
+    refreshEmpDropdown();
+    drawCal();
+    if(S.lv>=1)renderContent();
+
+    const now=new Date().toLocaleString('zh-TW');
+    document.getElementById('fs-status').textContent=
+      `📥 已讀取（${loaded.length} 個）｜ ${now}`;
+    showMsg(`✅ 已讀取：${loaded.join('、')} ｜ 共 ${DB.length} 筆主檔`,'ok');
+  }catch(e){
+    showMsg('讀取失敗：'+e.message,'err');
+  }finally{
+    btn.innerHTML='📥 從資料夾讀取';btn.disabled=false;
+  }
+}
+
 async function init(){
   const now=new Date();
   calY=now.getFullYear();calM=now.getMonth();
   S.date=td2s(now);
   // ★ 最先執行：先顯示預設位置，讓使用者一進來就看到
   refreshLocationBar();
+  fsInit(); // 初始化本機資料夾功能
   await load();
   await migrateDB();
   await loadSettings(); // 載入三個設定 XML（載入後自動更新位置列）
