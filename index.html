@@ -1,1 +1,2695 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A13 護理紀錄系統 v2</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+/* ═══════════════ CSS 變數 ═══════════════ */
+:root{
+  --c0:#006978;   /* 主色深 */
+  --c1:#0097a7;   /* 主色 */
+  --c2:#00bcd4;   /* 主色淡 */
+  --c3:#e0f7fa;   /* 主色極淡 */
+  --feed-h:#e65100;  --feed-b:#fff8e1;  /* 餵食 */
+  --out-h:#2e7d32;   --out-b:#e8f5e9;  /* 排出 */
+  --met-h:#1565c0;   --met-b:#e3f2fd;  /* 體重腹圍 */
+  --bed-h:#4a148c;   --bed-b:#f3e5f5;  /* 床號主檔 */
+  --bdr:#b0bec5; --txt:#1a1a2e; --gray:#546e7a; --bg:#eceff1;
+  --red:#c62828; --orange:#ef6c00; --green:#2e7d32;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Microsoft JhengHei',sans-serif;font-size:20px;
+  background:var(--bg);color:var(--txt);min-height:100vh}
 
+/* ── 頁首 ── */
+.app-bar{background:linear-gradient(135deg,var(--c0),var(--c1));
+  color:#fff;padding:10px 20px;display:flex;align-items:center;gap:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.app-bar h1{font-size:27px;font-weight:800;letter-spacing:.5px}
+.app-bar small{font-size:15px;opacity:.75;display:block}
+.app-bar .ver{margin-left:auto;background:rgba(255,255,255,.15);
+  padding:3px 10px;border-radius:20px;font-size:15px}
+
+/* ── Nav 頁籤 ── */
+.nav{background:#fff;display:flex;border-bottom:2px solid var(--c3);
+  padding:0 16px;gap:2px;overflow-x:auto}
+.nav-tab{padding:10px 16px;cursor:pointer;border-bottom:3px solid transparent;
+  font-weight:700;font-size:18px;color:var(--gray);white-space:nowrap;
+  transition:.18s;flex-shrink:0}
+.nav-tab.on{border-bottom-color:var(--c1);color:var(--c1)}
+.nav-tab:hover{background:var(--c3)}
+
+/* ── 麵包屑 ── */
+.bc-bar{background:#fff;border-bottom:1px solid #e0e0e0;
+  padding:8px 20px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:36px}
+.bc-item{font-size:17px;color:var(--gray);cursor:pointer;padding:2px 6px;
+  border-radius:4px;transition:.15s}
+.bc-item:hover{background:var(--c3);color:var(--c1)}
+.bc-item.cur{color:var(--c1);font-weight:700;cursor:default}
+.bc-item.cur:hover{background:none}
+.bc-sep{color:#b0bec5;font-size:17px}
+
+/* ── 訊息區 ── */
+#msg-area{max-width:1120px;margin:8px auto 0;padding:0 18px}
+.msg{padding:8px 14px;border-radius:5px;font-size:18px;margin-bottom:0;
+  display:flex;align-items:center;gap:8px}
+.msg-ok{background:#e8f5e9;color:#1b5e20;border-left:4px solid #43a047}
+.msg-err{background:#ffebee;color:#b71c1c;border-left:4px solid #c62828}
+.msg-info{background:var(--c3);color:var(--c0);border-left:4px solid var(--c1)}
+
+/* ── 主內容 ── */
+.content{max-width:1120px;margin:0 auto;padding:16px 18px}
+
+/* ── 頁面 (Tab panels) ── */
+.pane{display:none}.pane.on{display:block}
+
+/* ══════════ 月曆 ══════════ */
+.cal-card{background:#fff;border-radius:12px;
+  box-shadow:0 4px 16px rgba(0,150,160,.12);max-width:460px;margin:0 auto;overflow:hidden}
+.cal-hdr{background:linear-gradient(135deg,var(--c0),var(--c1));
+  color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+.cal-hdr h2{font-size:25px;font-weight:800}
+.cal-btn{background:rgba(255,255,255,.2);border:none;color:#fff;
+  width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:28px;
+  display:flex;align-items:center;justify-content:center;transition:.15s}
+.cal-btn:hover{background:rgba(255,255,255,.35)}
+.cal-wk{display:grid;grid-template-columns:repeat(7,1fr);background:var(--c3)}
+.cal-wk span{text-align:center;padding:7px 0;font-size:15px;font-weight:800;color:var(--c0)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-day{padding:7px 3px;text-align:center;cursor:pointer;min-height:48px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;transition:.15s}
+.cal-day:hover{background:var(--c3)}
+.cal-day.other .dn{color:#bdbdbd}
+.cal-day.today .dn{background:var(--c1);color:#fff;border-radius:50%;
+  width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.cal-day.sel{background:#b2ebf2;outline:2px solid var(--c1)}
+.dn{font-size:18px;font-weight:600}
+.cal-dot{width:7px;height:7px;border-radius:50%;background:var(--orange)}
+
+/* ══════════ 通用元件 ══════════ */
+/* 按鈕 */
+.btn{padding:7px 14px;border:none;border-radius:6px;cursor:pointer;
+  font-size:18px;font-weight:700;transition:.18s;display:inline-flex;
+  align-items:center;gap:5px}
+.btn:hover{filter:brightness(1.1)}
+.btn:active{transform:scale(.97)}
+.btn-c1{background:var(--c1);color:#fff}
+.btn-feed{background:var(--feed-h);color:#fff}
+.btn-out{background:var(--out-h);color:#fff}
+.btn-met{background:var(--met-h);color:#fff}
+.btn-bed{background:var(--bed-h);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn-gray{background:var(--gray);color:#fff}
+.btn-sm{padding:3px 9px;font-size:17px}
+.btn-xs{padding:2px 7px;font-size:15px}
+
+/* 區段標題列 */
+.sec-bar{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.sec-bar h3{font-size:21px;font-weight:800}
+.sec-bar .btns{display:flex;gap:7px;flex-wrap:wrap}
+
+/* 卡片 */
+.card{background:#fff;border-radius:8px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden;margin-bottom:12px}
+.card-hdr{padding:10px 14px;font-weight:800;font-size:18px;color:#fff;
+  display:flex;align-items:center;gap:8px}
+.card-body{padding:12px 14px}
+
+/* 記錄卡片 (可點擊進入) */
+.rec-row{border:1px solid var(--bdr);border-radius:7px;
+  background:#fff;margin-bottom:9px;display:flex;align-items:stretch;
+  transition:.18s;overflow:hidden}
+.rec-row:hover{box-shadow:0 2px 10px rgba(0,150,160,.2);border-color:var(--c1)}
+.rec-row .drill{flex:1;padding:11px 14px;cursor:pointer;min-width:0}
+.rec-row .drill:hover .row-title{color:var(--c1)}
+.rec-row .acts{padding:8px 10px;display:flex;flex-direction:column;
+  gap:5px;justify-content:center;border-left:1px solid var(--bdr);background:#fafafa}
+.id-badge{display:inline-block;background:var(--c1);color:#fff;
+  padding:3px 9px;border-radius:4px;font-family:monospace;font-size:17px;
+  font-weight:700;margin-bottom:4px}
+.row-title{font-weight:700;font-size:20px;margin-bottom:2px;transition:.15s}
+.row-sub{font-size:15px;color:var(--gray)}
+.badge-pill{display:inline-block;padding:1px 7px;border-radius:20px;
+  font-size:15px;font-weight:700;margin-right:4px}
+.pill-feed{background:var(--feed-b);color:var(--feed-h)}
+.pill-out{background:var(--out-b);color:var(--out-h)}
+.pill-met{background:var(--met-b);color:var(--met-h)}
+
+/* 空狀態 */
+.empty{text-align:center;padding:40px 20px;color:var(--gray)}
+.empty .icon{font-size:62px;margin-bottom:10px}
+
+/* ══════════ 試算表摘要表 ══════════ */
+.sheet-wrap{overflow-x:auto;border-radius:8px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:14px}
+table.sht{border-collapse:collapse;font-size:17px;white-space:nowrap;width:100%}
+table.sht th,table.sht td{border:1px solid #90a4ae;padding:4px 8px;text-align:center}
+.sht-hdr th{background:var(--c0);color:#fff;font-weight:800;font-size:15px}
+.sht-sub th{background:var(--c2);color:#fff;font-weight:700;font-size:15px}
+.sht-bed td{background:#e0f2f1;font-weight:800;color:#00695c}
+.s-feed{background:#fffde7}.s-time{background:#fff176;font-weight:700}
+.s-sub{background:#ffee58;font-weight:800}.s-urine{background:#e8f5e9}
+.s-drain{background:#b2dfdb}.s-wt{background:#fce4ec}.s-turn{background:#e0f7fa}
+.s-abd{background:#fff3e0}
+
+/* ══════════ 三階詳情 Tab ══════════ */
+.detail-tabs{display:flex;gap:1px;background:#ddd;border-radius:8px 8px 0 0;overflow:hidden}
+.dtab{flex:1;padding:9px 4px;text-align:center;cursor:pointer;
+  font-weight:700;font-size:18px;transition:.18s}
+.dtab.feed-tab{background:var(--feed-b);color:var(--feed-h)}
+.dtab.out-tab{background:var(--out-b);color:var(--out-h)}
+.dtab.met-tab{background:var(--met-b);color:var(--met-h)}
+.dtab.on{filter:brightness(.88);outline:2px solid currentColor;z-index:1}
+.dtab-panel{display:none;border:2px solid var(--bdr);
+  border-top:none;border-radius:0 0 8px 8px;padding:14px}
+.dtab-panel.on{display:block}
+.dtab-panel.feed-panel.on{background:var(--feed-b);border-color:var(--feed-h)}
+.dtab-panel.out-panel.on{background:var(--out-b);border-color:var(--out-h)}
+.dtab-panel.met-panel.on{background:var(--met-b);border-color:var(--met-h)}
+
+/* ══════════ 明細行內表格 ══════════ */
+table.det{border-collapse:collapse;width:100%;font-size:17px}
+table.det th,table.det td{border:1px solid var(--bdr);padding:5px 8px}
+table.det th{font-weight:700;font-size:15px;color:#fff}
+table.det td{text-align:center}
+.det-feed th{background:var(--feed-h)}
+.det-out th{background:var(--out-h)}
+.det-met th{background:var(--met-h)}
+table.det tbody tr:nth-child(even){background:#fafafa}
+table.det tbody tr:hover{background:#f0f4ff}
+.det-key{font-family:monospace;font-size:15px;color:var(--gray);font-weight:700}
+.time-inp{font-family:'Courier New',monospace;font-size:22px;font-weight:700;
+  letter-spacing:3px;text-align:center;color:var(--c0);background:#e0f7fa;
+  border:2px solid var(--c2) !important}
+.time-inp::placeholder{font-size:18px;letter-spacing:2px;color:#90a4ae;font-weight:400}
+.det-total td{font-weight:800;border-top:3px solid #546e7a !important}
+.det-feed-tot td{background:#ffe082 !important;color:#bf360c}
+.det-out-tot td{background:#a5d6a7 !important;color:#1b5e20}
+.det-total .tot-lbl{font-size:13px;font-weight:800}
+
+/* ══════════ Modal ══════════ */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+  z-index:9999;align-items:flex-start;justify-content:center;
+  padding:20px;overflow-y:auto}
+.ov.on{display:flex}
+.modal{background:#fff;border-radius:12px;width:100%;max-width:680px;
+  margin:auto;box-shadow:0 12px 48px rgba(0,0,0,.25);overflow:hidden}
+.modal-hdr{padding:14px 18px;color:#fff;display:flex;
+  justify-content:space-between;align-items:center}
+.modal-hdr h3{font-size:21px;font-weight:800}
+.modal-body{padding:18px}
+.cls{background:none;border:none;color:#fff;font-size:31px;
+  cursor:pointer;line-height:1;padding:0 4px}
+
+/* 表單 */
+.fgroup{display:flex;flex-direction:column;gap:3px}
+.fgroup label{font-size:15px;font-weight:700;color:var(--gray)}
+.fgroup input,.fgroup select,.fgroup textarea{
+  padding:6px 9px;border:1px solid var(--bdr);border-radius:5px;
+  font-size:18px;width:100%;font-family:inherit}
+.fgroup input:focus,.fgroup select:focus{
+  outline:none;border-color:var(--c1);box-shadow:0 0 0 2px rgba(0,151,167,.15)}
+.fgroup input[readonly]{background:#f5f5f5;color:var(--gray);font-family:monospace;font-size:17px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.fgrid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fsec{border-radius:8px;overflow:hidden;margin-bottom:12px}
+.fsec-hdr{padding:7px 13px;font-weight:800;font-size:17px;color:#fff}
+.fsec-body{padding:12px;background:#fafafa}
+
+/* 鍵值顯示盒 */
+.key-box{background:#1e1e2e;color:#89dceb;padding:7px 12px;
+  border-radius:5px;font-family:monospace;font-size:17px;
+  margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.key-box .lbl{color:#6c7086;font-size:15px}
+.key-box .val{font-weight:700;font-size:18px}
+
+/* ══════════ 查詢 ══════════ */
+.qcard{background:#fff;border-radius:8px;padding:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:14px}
+
+/* ══════════ XML 檢視 ══════════ */
+.xml-view{background:#1e1e2e;color:#cdd6f4;padding:16px;border-radius:8px;
+  font-family:'Courier New',monospace;font-size:17px;line-height:1.7;
+  overflow:auto;max-height:520px;white-space:pre}
+.xt{color:#89dceb}.xa{color:#a6e3a1}.xc{color:#6c7086}
+
+/* ══════════ 架構說明 ══════════ */
+.tier-box{border-radius:8px;overflow:hidden;margin-bottom:10px}
+.tier-hdr{padding:8px 14px;font-weight:800;font-size:18px;color:#fff}
+.tier-body{padding:12px 14px;font-size:17px;line-height:1.7}
+.tier-key{font-family:monospace;background:#1e1e2e;color:#a6e3a1;
+  padding:2px 8px;border-radius:4px;font-size:17px}
+.tree{font-family:'Courier New',monospace;font-size:17px;
+  background:#1e1e2e;color:#cdd6f4;padding:14px;border-radius:8px;
+  line-height:1.75;overflow-x:auto}
+.tree .t1{color:#89dceb}.tree .t2{color:#a6e3a1}
+.tree .t3f{color:#fab387}.tree .t3o{color:#a6e3a1}.tree .t3m{color:#74c7ec}
+
+/* ══════════ 響應式 ══════════ */
+@media(max-width:700px){
+  .content{padding:10px 12px}
+  .rec-row{flex-direction:column}
+  .rec-row .acts{flex-direction:row;border-left:none;border-top:1px solid var(--bdr)}
+  .modal{max-width:100%}
+  table.sht{font-size:15px}
+}
+
+/* ══════════ 桌機 / 手機 切換 ══════════ */
+.dev-toggle{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.5);
+  color:#fff;padding:5px 13px;border-radius:20px;cursor:pointer;font-size:18px;
+  font-weight:700;transition:.2s;display:flex;align-items:center;gap:6px}
+.dev-toggle:hover{background:rgba(255,255,255,.32)}
+.dev-toggle .lbl{font-size:13px;font-weight:700}
+
+/* 手機模式 */
+html.m .content{padding:8px 10px}
+html.m .fgrid{grid-template-columns:1fr 1fr}
+html.m .fgrid-2{grid-template-columns:1fr 1fr}
+html.m .cal-card{max-width:100%}
+html.m .modal{max-width:100%;border-radius:10px 10px 0 0;
+  position:fixed;bottom:0;left:0;right:0;margin:0;max-height:90vh;overflow-y:auto}
+html.m .ov{align-items:flex-end;padding:0}
+html.m .rec-row{flex-direction:column}
+html.m .rec-row .acts{flex-direction:row;border-left:none;border-top:1px solid var(--bdr);flex-wrap:wrap}
+html.m .detail-tabs .dtab{font-size:16px;padding:10px 4px}
+html.m table.sht{font-size:13px}
+html.m table.det{font-size:13px}
+html.m .det-key{font-size:12px}
+html.m .nav-tab{font-size:16px;padding:9px 12px}
+html.m .btn-xs{padding:5px 10px;font-size:13px}
+html.m .btn-sm{padding:5px 12px;font-size:14px}
+html.m .id-badge{font-size:14px}
+
+/* ══════════ Google Drive ══════════ */
+.gdrive-bar{background:linear-gradient(135deg,#1a73e8,#0d47a1);
+  color:#fff;padding:8px 20px;display:flex;align-items:center;
+  gap:10px;flex-wrap:wrap;font-size:13px}
+.gdrive-bar .gd-title{font-weight:800;display:flex;align-items:center;gap:6px}
+.gdrive-bar .gd-status{font-size:12px;opacity:.85;flex:1}
+.btn-gdrive{background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.5);
+  color:#fff;padding:5px 13px;border-radius:20px;cursor:pointer;
+  font-size:13px;font-weight:700;transition:.2s;display:inline-flex;align-items:center;gap:5px}
+.btn-gdrive:hover{background:rgba(255,255,255,.35)}
+.btn-gdrive:disabled{opacity:.45;cursor:not-allowed}
+.gd-user{display:flex;align-items:center;gap:7px}
+.gd-avatar{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.5)}
+.sync-spin{display:inline-block;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.np-wrap{display:none;position:fixed;inset:0;z-index:999999;
+  align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.35)}
+.np-wrap.on{display:flex}
+.np-box{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:360px;
+  padding:14px 14px 20px;box-shadow:0 -6px 32px rgba(0,0,0,.25);
+  animation:npSlide .2s ease-out}
+@keyframes npSlide{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.np-fieldname{font-size:13px;color:var(--gray);font-weight:700;
+  text-align:center;margin-bottom:6px;padding:0 4px;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.np-disp{background:#1e1e2e;color:#a6e3a1;font-family:monospace;
+  font-size:28px;font-weight:700;padding:10px 16px;border-radius:10px;
+  text-align:right;min-height:52px;margin-bottom:12px;
+  letter-spacing:1px;word-break:break-all}
+.np-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:9px}
+.np-key{background:#f0f4f8;border:none;border-radius:10px;font-size:24px;
+  font-weight:700;padding:16px 8px;cursor:pointer;transition:.15s;color:#1a1a2e;
+  box-shadow:0 2px 4px rgba(0,0,0,.1)}
+.np-key:active{transform:scale(.93);background:#e0f7fa;color:var(--c1)}
+.np-key.k-back{background:#fff3e0;color:var(--orange);font-size:22px}
+.np-key.k-dot{background:#f3e5f5;color:var(--bed-h);font-size:22px}
+.np-key.k-clr{background:#ffebee;color:var(--red);font-size:16px;font-weight:800}
+.np-confirm{width:100%;background:linear-gradient(135deg,var(--c0),var(--c1));
+  color:#fff;border:none;border-radius:12px;font-size:20px;font-weight:800;
+  padding:14px;cursor:pointer;transition:.18s;letter-spacing:1px}
+.np-confirm:active{filter:brightness(.9)}
+
+/* ══════════ 時間九宮格 ══════════ */
+.tp-wrap{display:none;position:fixed;inset:0;z-index:999999;
+  align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.4)}
+.tp-wrap.on{display:flex}
+.tp-box{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:360px;
+  padding:14px 14px 20px;box-shadow:0 -6px 32px rgba(0,0,0,.25);
+  animation:npSlide .2s ease-out}
+.tp-fieldname{font-size:13px;color:var(--gray);font-weight:700;
+  text-align:center;margin-bottom:6px}
+.tp-disp{background:#1e1e2e;border-radius:10px;padding:12px 16px;
+  margin-bottom:8px;display:flex;align-items:center;
+  justify-content:center;gap:6px}
+.tp-seg{font-family:monospace;font-size:38px;font-weight:800;
+  width:74px;text-align:center;border-radius:8px;padding:4px 0;transition:.15s}
+.tp-seg.active{background:var(--c1);color:#fff}
+.tp-seg.done{color:#a6e3a1}
+.tp-seg.empty{color:#455a64}
+.tp-colon{font-family:monospace;font-size:38px;font-weight:800;color:#546e7a}
+.tp-hint{font-size:13px;text-align:center;margin-bottom:10px;
+  font-weight:700;padding:4px 10px;border-radius:20px;display:inline-block}
+.tp-hint-wrap{text-align:center;margin-bottom:10px}
+.tp-hint.ph{background:#e3f2fd;color:#1565c0}
+.tp-hint.pm{background:#e8f5e9;color:#2e7d32}
+.tp-hint.err{background:#ffebee;color:#c62828}
+.tp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:9px}
+.tp-key{background:#e3f2fd;border:none;border-radius:10px;font-size:26px;
+  font-weight:800;padding:16px 8px;cursor:pointer;transition:.15s;
+  color:#1565c0;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+.tp-key:active{transform:scale(.93);background:var(--c1);color:#fff}
+.tp-key.tp-back{background:#fff3e0;color:var(--orange);font-size:22px}
+.tp-key.tp-clr{background:#ffebee;color:var(--red);font-size:15px;font-weight:800}
+.tp-confirm{width:100%;background:linear-gradient(135deg,var(--c0),var(--c1));
+  color:#fff;border:none;border-radius:12px;font-size:20px;font-weight:800;
+  padding:14px;cursor:pointer;transition:.18s}
+.tp-confirm:active{filter:brightness(.9)}
+.tp-confirm:disabled{opacity:.4;cursor:not-allowed}
+</style>
+</head>
+<body>
+
+<!-- ══════ 頁首 ══════ -->
+<header class="app-bar">
+  <span style="font-size:39px">🏥</span>
+  <div>
+    <h1>A13 護理紀錄系統</h1>
+    <small>三階關聯式資料管理 · XML 格式持久化儲存</small>
+  </div>
+  <div class="ver">v2.0</div>
+  <button type="button" class="dev-toggle" id="dev-btn" onclick="toggleDev()" title="切換桌機／手機模式">
+    <span id="dev-icon">💻</span><span class="lbl" id="dev-lbl">桌機</span>
+  </button>
+</header>
+
+<!-- ══════ 頁籤 ══════ -->
+<nav class="nav">
+  <div class="nav-tab on" data-t="cal">📅 月曆</div>
+  <div class="nav-tab" data-t="rec">📋 記錄管理</div>
+  <div class="nav-tab" data-t="qry">🔍 查詢</div>
+  <div class="nav-tab" data-t="xml">💾 XML資料</div>
+  <div class="nav-tab" data-t="sch">📐 架構說明</div>
+  <div class="nav-tab" data-t="setup">⚙️ 系統設定</div>
+  <div class="nav-tab" data-t="cg">👩‍⚕️ 照護人員</div>
+  <div class="nav-tab" data-t="ward">🛏 病房管理</div>
+</nav>
+
+<!-- ══════ Google Drive 工具列 ══════ -->
+<div class="gdrive-bar" id="gd-bar">
+  <div class="gd-title">☁️ Google Drive 同步</div>
+  <div class="gd-status" id="gd-status">尚未登入 Google 帳號</div>
+  <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+    <div id="gd-user-area"></div>
+    <button type="button" class="btn-gdrive" id="gd-login-btn" onclick="gdLogin()">🔐 Google 登入</button>
+    <button type="button" class="btn-gdrive" id="gd-save-btn" onclick="gdSave()" disabled>☁️ 存至 Drive</button>
+    <button type="button" class="btn-gdrive" id="gd-load-btn" onclick="gdLoad()" disabled>📂 從 Drive 讀取</button>
+    <button type="button" class="btn-gdrive" id="gd-logout-btn" onclick="gdLogout()" style="display:none">登出</button>
+  </div>
+</div>
+
+<!-- ══════ 麵包屑 ══════ -->
+<div class="bc-bar" id="bc-bar"></div>
+
+<!-- ══════ 訊息 ══════ -->
+<div id="msg-area"></div>
+
+<!-- ══════ 主內容 ══════ -->
+<main class="content">
+
+  <!-- 月曆 -->
+  <div class="pane on" id="pane-cal">
+    <div class="cal-card">
+      <div class="cal-hdr">
+        <button type="button" class="cal-btn" onclick="calMove(-1)">‹</button>
+        <h2 id="cal-title"></h2>
+        <button type="button" class="cal-btn" onclick="calMove(1)">›</button>
+      </div>
+      <div class="cal-wk">
+        <span>日</span><span>一</span><span>二</span><span>三</span>
+        <span>四</span><span>五</span><span>六</span>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+    <p style="text-align:center;margin-top:12px;font-size:17px;color:var(--gray)">
+      橘點 = 有紀錄 ｜ 點選日期 → 進入記錄管理
+    </p>
+  </div>
+
+  <!-- 記錄管理 (三階導航在此切換) -->
+  <div class="pane" id="pane-rec">
+    <div id="rec-content"></div>
+  </div>
+
+  <!-- 查詢 -->
+  <div class="pane" id="pane-qry">
+    <div class="qcard">
+      <h3 style="color:var(--c1);margin-bottom:12px;font-size:21px">🔍 多條件查詢</h3>
+      <div class="fgrid" style="margin-bottom:12px">
+        <div class="fgroup"><label>開始日期</label><input type="date" id="q-from"></div>
+        <div class="fgroup"><label>結束日期</label><input type="date" id="q-to"></div>
+        <div class="fgroup"><label>班別</label>
+          <select id="q-sh"><option value="">全部</option>
+            <option value="D">白班</option><option value="E">小夜班</option><option value="N">大夜班</option>
+          </select>
+        </div>
+        <div class="fgroup"><label>組別</label>
+          <select id="q-gr"><option value="">全部</option>
+            <option value="A">A組</option><option value="B">B組</option><option value="C">C組</option>
+          </select>
+        </div>
+        <div class="fgroup"><label>床號</label><select id="q-bed"><option value="">全部</option></select></div>
+        <div class="fgroup"><label>紀錄編號（含）</label><input type="text" id="q-id" placeholder="如 20260425DA01"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn btn-c1" onclick="doSearch()">🔍 查詢</button>
+        <button type="button" class="btn btn-gray" onclick="clearSearch()">清除</button>
+      </div>
+    </div>
+    <div id="q-result"></div>
+  </div>
+
+  <!-- XML資料 -->
+  <div class="pane" id="pane-xml">
+    <div class="sec-bar">
+      <h3 style="color:var(--c1)">💾 XML 原始資料</h3>
+      <div class="btns">
+        <button type="button" class="btn btn-c1" onclick="showXML()">🔄 重新整理</button>
+        <button type="button" class="btn" style="background:#ef6c00;color:#fff" onclick="exportXML()">⬇ 匯出</button>
+        <button type="button" class="btn btn-red" onclick="clearAll()">🗑 清除全部</button>
+      </div>
+    </div>
+    <div style="font-size:17px;color:var(--gray);margin-bottom:8px">
+      主檔：<b id="xc1">0</b> 筆 ｜ 床號主檔：<b id="xc2">0</b> 筆 ｜
+      餵食明細：<b id="xc3">0</b> 筆 ｜ 排出明細：<b id="xc4">0</b> 筆 ｜ 體重腹圍明細：<b id="xc5">0</b> 筆
+    </div>
+    <div class="xml-view" id="xml-view">（點選「重新整理」載入）</div>
+  </div>
+
+  <!-- 架構說明 -->
+  <div class="pane" id="pane-sch">
+    <div class="card">
+      <div class="card-hdr" style="background:var(--c0)">📐 三階關聯式資料架構圖</div>
+      <div class="card-body">
+        <!-- 樹狀圖 -->
+        <div class="tree" id="tree-diagram"></div>
+        <br>
+        <!-- 三階說明 -->
+        <div class="tier-box" style="border:2px solid var(--c1)">
+          <div class="tier-hdr" style="background:var(--c1)">第一階 主檔（紀錄主檔）</div>
+          <div class="tier-body">
+            <b>鍵值：</b><span class="tier-key">紀錄編號</span>
+            &nbsp;= 年月日(YYYYMMDD) + 班別(D/E/N) + 組別(A/B/C) + 兩位流水號<br>
+            例：<span class="tier-key">20260425DA01</span>（2026-04-25 白班 A組 第1筆）<br>
+            <b>欄位：</b>日期、班別、組別、流水號、護理姓名、單位、員編
+          </div>
+        </div>
+        <div class="tier-box" style="border:2px solid var(--bed-h)">
+          <div class="tier-hdr" style="background:var(--bed-h)">第二階 次要主檔（床號主檔）</div>
+          <div class="tier-body">
+            <b>鍵值：</b><span class="tier-key">紀錄編號 + 床號</span><br>
+            例：<span class="tier-key">20260425DA018202</span><br>
+            <b>關聯：</b>多對一 → 一筆主檔可有多個床號，一個床號屬於一筆主檔<br>
+            <b>欄位：</b>床號、備註
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px">
+          <div class="tier-box" style="border:2px solid var(--feed-h)">
+            <div class="tier-hdr" style="background:var(--feed-h)">第三階-A 餵食明細</div>
+            <div class="tier-body">
+              <b>鍵值：</b><span class="tier-key">紀錄編號+床號+F+序號</span><br>
+              例：<span class="tier-key">20260425DA018202F01</span><br>
+              <b>欄位：</b>時間、餵食奶、餵食水、高蛋白、藥+水、餵水、其他、小計
+            </div>
+          </div>
+          <div class="tier-box" style="border:2px solid var(--out-h)">
+            <div class="tier-hdr" style="background:var(--out-h)">第三階-B 排出明細</div>
+            <div class="tier-body">
+              <b>鍵值：</b><span class="tier-key">紀錄編號+床號+O+序號</span><br>
+              例：<span class="tier-key">20260425DA018202O01</span><br>
+              <b>欄位：</b>時間、尿量、屎量、尿與屎、引流量
+            </div>
+          </div>
+          <div class="tier-box" style="border:2px solid var(--met-h)">
+            <div class="tier-hdr" style="background:var(--met-h)">第三階-C 體重腹圍明細</div>
+            <div class="tier-body">
+              <b>鍵值：</b><span class="tier-key">紀錄編號+床號+M+序號</span><br>
+              例：<span class="tier-key">20260425DA018202M01</span><br>
+              <b>欄位：</b>時間、體重、前次體重、翻身方向、翻身時間、腹圍、尿袋
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 系統設定 Setup.xml ══════ -->
+  <div class="pane" id="pane-setup">
+    <div class="sec-bar">
+      <h3 style="color:var(--c0)">⚙️ 系統設定 (Setup.xml)</h3>
+    </div>
+    <div class="card">
+      <div class="card-hdr" style="background:var(--c0)">🏥 機構與儲存設定</div>
+      <div class="card-body">
+        <div class="fgrid" style="margin-bottom:14px">
+          <div class="fgroup"><label>機構英文名稱</label>
+            <input type="text" id="su-hn-en" placeholder="Taipei City Hospital Zhongxiao Branch"></div>
+          <div class="fgroup"><label>機構中文名稱</label>
+            <input type="text" id="su-hn-zh" placeholder="臺北市立聯合醫院忠孝院區"></div>
+          <div class="fgroup"><label>單位英文名稱</label>
+            <input type="text" id="su-un-en" placeholder="Respiratory Care Ward"></div>
+          <div class="fgroup"><label>單位中文名稱</label>
+            <input type="text" id="su-un-zh" placeholder="呼吸照護病房"></div>
+          <div class="fgroup"><label>照護儲存檔名</label>
+            <input type="text" id="su-fname" placeholder="A13_NursingRecords.xml"></div>
+          <div class="fgroup"><label>資料存放位置說明</label>
+            <input type="text" id="su-floc" placeholder="Google Drive / 本機備份"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn btn-c1" onclick="saveSetup()">💾 儲存設定</button>
+          <button type="button" class="btn btn-gray" onclick="loadSetupUI()">↩ 還原</button>
+          <button type="button" class="btn" style="background:#7b1fa2;color:#fff" onclick="exportSingleXML('setup')">⬇ 匯出 Setup.xml</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-hdr" style="background:#37474f">📄 目前 Setup.xml 內容</div>
+      <div class="card-body">
+        <div class="xml-view" id="su-xml-preview" style="max-height:200px">（儲存後顯示）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 照護人員 Caregivers.xml ══════ -->
+  <div class="pane" id="pane-cg">
+    <div class="sec-bar">
+      <h3 style="color:var(--met-h)">👩‍⚕️ 照護人員管理 (Caregivers.xml)</h3>
+      <div class="btns">
+        <button type="button" class="btn btn-met" onclick="openCgForm()">＋ 新增人員</button>
+        <button type="button" class="btn" style="background:#7b1fa2;color:#fff" onclick="exportSingleXML('cg')">⬇ 匯出 Caregivers.xml</button>
+      </div>
+    </div>
+    <div id="cg-list"></div>
+  </div>
+
+  <!-- ══════ 病房管理 Ward.xml ══════ -->
+  <div class="pane" id="pane-ward">
+    <div class="sec-bar">
+      <h3 style="color:var(--out-h)">🛏 病房管理 (Ward.xml)</h3>
+      <div class="btns">
+        <button type="button" class="btn btn-out" onclick="openWardForm()">＋ 新增病房</button>
+        <button type="button" class="btn" style="background:#7b1fa2;color:#fff" onclick="exportSingleXML('ward')">⬇ 匯出 Ward.xml</button>
+      </div>
+    </div>
+    <div id="ward-list"></div>
+  </div>
+
+</main>
+
+<!-- ══════════════════════════════════════
+     Modals
+══════════════════════════════════════ -->
+
+<!-- Modal：主檔（第一階） -->
+<div class="ov" id="ov-rec">
+<div class="modal">
+  <div class="modal-hdr" style="background:var(--c0)">
+    <h3 id="rec-form-title">新增護理主檔記錄</h3>
+    <button type="button" class="cls" onclick="closeOv('ov-rec')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="key-box">
+      <span class="lbl">【第一階】鍵值：紀錄編號</span>
+      <span class="val" id="rec-id-preview">（儲存時自動產生）</span>
+    </div>
+    <div class="fsec">
+      <div class="fsec-hdr" style="background:var(--c1)">📋 基本資訊</div>
+      <div class="fsec-body">
+        <div class="fgrid">
+          <div class="fgroup"><label>日期 *</label><input type="date" id="rf-date" oninput="previewRecId()"></div>
+          <div class="fgroup"><label>班別 *</label>
+            <select id="rf-sh" onchange="previewRecId()">
+              <option value="D">白班 D</option>
+              <option value="E">小夜班 E</option>
+              <option value="N">大夜班 N</option>
+            </select>
+          </div>
+          <div class="fgroup"><label>組別 *</label>
+            <select id="rf-gr" onchange="previewRecId()">
+              <option value="A">A 組</option>
+              <option value="B">B 組</option>
+              <option value="C">C 組</option>
+            </select>
+          </div>
+          <div class="fgroup"><label>員編（照護人員）*</label>
+            <select id="rf-emp" onchange="fillNurseFromEmp()">
+              <option value="">-- 選擇員編 --</option>
+            </select>
+          </div>
+          <div class="fgroup"><label>護理姓名（自動帶入）</label>
+            <input type="text" id="rf-nm" placeholder="選員編後自動填入" readonly
+              style="background:#e0f7fa;font-weight:700;color:var(--c0)"></div>
+          <div class="fgroup"><label>單位</label>
+            <input type="text" id="rf-unit" placeholder="RCW"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-rec')">取消</button>
+      <button type="button" class="btn btn-c1" onclick="saveRec()">💾 儲存主檔</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Modal：床號主檔（第二階） -->
+<div class="ov" id="ov-bed">
+<div class="modal">
+  <div class="modal-hdr" style="background:var(--bed-h)">
+    <h3 id="bed-form-title">新增床號（第二階）</h3>
+    <button type="button" class="cls" onclick="closeOv('ov-bed')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="key-box">
+      <span class="lbl">【第二階】鍵值：紀錄編號 + 床號</span>
+      <span class="val" id="bed-id-preview">…</span>
+    </div>
+    <div class="fsec">
+      <div class="fsec-hdr" style="background:var(--bed-h)">🛏 床號資訊</div>
+      <div class="fsec-body">
+        <div class="fgrid-2">
+          <div class="fgroup"><label>床號 *</label>
+            <select id="bf-bed" onchange="previewBedId()">
+              <option value="">-- 選擇床號 --</option>
+            </select>
+          </div>
+          <div class="fgroup"><label>備註</label><input type="text" id="bf-notes" placeholder="床位備註"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-bed')">取消</button>
+      <button type="button" class="btn btn-bed" onclick="saveBed()">💾 儲存床號</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Modal：餵食明細（第三階-A） -->
+<div class="ov" id="ov-feed">
+<div class="modal">
+  <div class="modal-hdr" style="background:var(--feed-h)">
+    <h3 id="feed-form-title">🍼 新增餵食明細</h3>
+    <button type="button" class="cls" onclick="closeOv('ov-feed')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="key-box" style="background:#2d1b00;color:#fab387">
+      <span class="lbl" style="color:#6c7086">【第三階-A】鍵值：紀錄編號+床號+F+序號</span>
+      <span class="val" id="feed-id-preview">…</span>
+    </div>
+    <div class="fsec">
+      <div class="fsec-hdr" style="background:var(--feed-h)">🍼 餵食資料</div>
+      <div class="fsec-body" style="background:var(--feed-b)">
+        <div class="fgrid">
+          <div class="fgroup"><label>時間（24H）</label><input type="text" id="ff-time" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
+          <div class="fgroup"><label>餵食奶 (ml)</label><input type="number" id="ff-milk" placeholder="0" oninput="calcFeedSub()"></div>
+          <div class="fgroup"><label>餵食水 (ml)</label><input type="number" id="ff-fw" placeholder="0" oninput="calcFeedSub()"></div>
+          <div class="fgroup"><label>高蛋白 (ml)</label><input type="number" id="ff-pro" placeholder="0" oninput="calcFeedSub()"></div>
+          <div class="fgroup"><label>藥+水 (ml)</label><input type="number" id="ff-mw" placeholder="0" oninput="calcFeedSub()"></div>
+          <div class="fgroup"><label>餵水 (ml)</label><input type="number" id="ff-df" placeholder="0" oninput="calcFeedSub()"></div>
+          <div class="fgroup"><label>其他餵食 (ml)</label><input type="number" id="ff-of" placeholder="0" oninput="calcFeedSub()"></div>
+          <div class="fgroup"><label>小計 (自動)</label>
+            <input type="number" id="ff-sub" readonly style="font-weight:700;background:#fff176">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-feed')">取消</button>
+      <button type="button" class="btn btn-feed" onclick="saveFeed()">💾 儲存餵食明細</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Modal：排出明細（第三階-B） -->
+<div class="ov" id="ov-out">
+<div class="modal">
+  <div class="modal-hdr" style="background:var(--out-h)">
+    <h3 id="out-form-title">💧 新增排出明細</h3>
+    <button type="button" class="cls" onclick="closeOv('ov-out')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="key-box" style="background:#001a00;color:#a6e3a1">
+      <span class="lbl" style="color:#6c7086">【第三階-B】鍵值：紀錄編號+床號+O+序號</span>
+      <span class="val" id="out-id-preview">…</span>
+    </div>
+    <div class="fsec">
+      <div class="fsec-hdr" style="background:var(--out-h)">💧 排出資料</div>
+      <div class="fsec-body" style="background:var(--out-b)">
+        <div class="fgrid">
+          <div class="fgroup"><label>時間（24H）</label><input type="text" id="of-time" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
+          <div class="fgroup"><label>尿量 (ml)</label><input type="number" id="of-ur" placeholder="0"></div>
+          <div class="fgroup"><label>屎量 (ml)</label><input type="number" id="of-st" placeholder="0"></div>
+          <div class="fgroup"><label>尿與屎</label><input type="number" id="of-cb" placeholder="0"></div>
+          <div class="fgroup"><label>引流量 (ml)</label><input type="number" id="of-dr" placeholder="0"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-out')">取消</button>
+      <button type="button" class="btn btn-out" onclick="saveOut()">💾 儲存排出明細</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Modal：體重腹圍明細（第三階-C） -->
+<div class="ov" id="ov-met">
+<div class="modal">
+  <div class="modal-hdr" style="background:var(--met-h)">
+    <h3 id="met-form-title">⚖️ 新增體重腹圍明細</h3>
+    <button type="button" class="cls" onclick="closeOv('ov-met')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="key-box" style="background:#00003d;color:#74c7ec">
+      <span class="lbl" style="color:#6c7086">【第三階-C】鍵值：紀錄編號+床號+M+序號</span>
+      <span class="val" id="met-id-preview">…</span>
+    </div>
+    <div class="fsec">
+      <div class="fsec-hdr" style="background:var(--met-h)">⚖️ 體重 / 翻身 / 腹圍</div>
+      <div class="fsec-body" style="background:var(--met-b)">
+        <div class="fgrid">
+          <div class="fgroup"><label>記錄時間（24H）</label><input type="text" id="mf-time" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
+          <div class="fgroup"><label>體重 (kg)</label><input type="number" step="0.1" id="mf-wt" placeholder="0.0"></div>
+          <div class="fgroup"><label>前次體重 (kg)</label><input type="number" step="0.1" id="mf-pw" placeholder="0.0"></div>
+          <div class="fgroup"><label>翻身方向</label>
+            <select id="mf-td">
+              <option value="">--</option>
+              <option value="左">左</option>
+              <option value="右">右</option>
+              <option value="平躺">平躺</option>
+            </select>
+          </div>
+          <div class="fgroup"><label>翻身時間（24H）</label><input type="text" id="mf-tt" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
+          <div class="fgroup"><label>腹圍 (cm)</label><input type="number" step="0.1" id="mf-ab" placeholder="0.0"></div>
+          <div class="fgroup"><label>尿袋標記</label>
+            <select id="mf-ub">
+              <option value="">無</option>
+              <option value="置左">置左</option>
+              <option value="置右">置右</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-met')">取消</button>
+      <button type="button" class="btn btn-met" onclick="saveMet()">💾 儲存體重腹圍明細</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════
+     JavaScript
+══════════════════════════════════════ -->
+<!-- Modal：照護人員（新增/修改）-->
+<div class="ov" id="ov-cg">
+<div class="modal">
+  <div class="modal-hdr" style="background:var(--met-h)">
+    <h3 id="cg-form-title">新增照護人員</h3>
+    <button type="button" class="cls" onclick="closeOv('ov-cg')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="key-box" style="background:#00003d;color:#74c7ec">
+      <span class="lbl" style="color:#6c7086">鍵值：員編（唯一）</span>
+      <span class="val" id="cg-id-preview">—</span>
+    </div>
+    <div class="fsec">
+      <div class="fsec-hdr" style="background:var(--met-h)">👩‍⚕️ 人員資料</div>
+      <div class="fsec-body" style="background:var(--met-b)">
+        <div class="fgrid">
+          <div class="fgroup"><label>員編 *</label>
+            <input type="text" id="cg-emp" placeholder="N0960" oninput="this.value=this.value.toUpperCase();document.getElementById('cg-id-preview').textContent=this.value||'—'">
+          </div>
+          <div class="fgroup"><label>姓名 *</label>
+            <input type="text" id="cg-name" placeholder="吳玉柱"></div>
+          <div class="fgroup" style="grid-column:1/-1"><label>技術士證照</label>
+            <select id="cg-lic">
+              <option value="">無</option>
+              <option value="單一級技術士">單一級技術士</option>
+              <option value="甲級技術士">甲級技術士</option>
+              <option value="乙級技術士">乙級技術士</option>
+              <option value="丙級技術士">丙級技術士</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-cg')">取消</button>
+      <button type="button" class="btn btn-met" onclick="saveCg()">💾 儲存人員</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Modal：病房（新增/修改）-->
+<div class="ov" id="ov-ward">
+<div class="modal">
+  <div class="modal-hdr" style="background:var(--out-h)">
+    <h3 id="ward-form-title">新增病房</h3>
+    <button type="button" class="cls" onclick="closeOv('ov-ward')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="key-box" style="background:#001a00;color:#a6e3a1">
+      <span class="lbl" style="color:#6c7086">鍵值：病房編號（唯一）</span>
+      <span class="val" id="ward-id-preview">—</span>
+    </div>
+    <div class="fsec">
+      <div class="fsec-hdr" style="background:var(--out-h)">🛏 病房資料</div>
+      <div class="fsec-body" style="background:var(--out-b)">
+        <div class="fgrid">
+          <div class="fgroup"><label>病房編號 *</label>
+            <input type="text" id="wd-no" placeholder="8202" oninput="document.getElementById('ward-id-preview').textContent=this.value||'—'">
+          </div>
+          <div class="fgroup" style="grid-column:1/-1"><label>病房說明（個資保護：請勿填入姓名等個人資料）</label>
+            <input type="text" id="wd-desc" placeholder="例：單人病房、靠窗、呼吸器使用中">
+          </div>
+        </div>
+        <div style="margin-top:8px;padding:8px;background:#fff9c4;border-radius:5px;font-size:13px;color:#e65100">
+          🔒 個資保護提醒：病房說明欄請勿填入病患姓名、身分證字號等個人識別資訊。
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-ward')">取消</button>
+      <button type="button" class="btn btn-out" onclick="saveWard()">💾 儲存病房</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══════ 數字九宮格 ══════ -->
+<div class="np-wrap" id="np-wrap">
+  <div class="np-box">
+    <div class="np-fieldname" id="np-field">數值輸入</div>
+    <div class="np-disp" id="np-disp">0</div>
+    <div class="np-grid">
+      <button type="button" class="np-key" onclick="npKey('7')">7</button>
+      <button type="button" class="np-key" onclick="npKey('8')">8</button>
+      <button type="button" class="np-key" onclick="npKey('9')">9</button>
+      <button type="button" class="np-key" onclick="npKey('4')">4</button>
+      <button type="button" class="np-key" onclick="npKey('5')">5</button>
+      <button type="button" class="np-key" onclick="npKey('6')">6</button>
+      <button type="button" class="np-key" onclick="npKey('1')">1</button>
+      <button type="button" class="np-key" onclick="npKey('2')">2</button>
+      <button type="button" class="np-key" onclick="npKey('3')">3</button>
+      <button type="button" class="np-key k-dot" onclick="npKey('.')">．</button>
+      <button type="button" class="np-key" onclick="npKey('0')">0</button>
+      <button type="button" class="np-key k-back" onclick="npBack()">⌫</button>
+    </div>
+    <button type="button" class="np-confirm" onclick="npDone()">✓ 確認</button>
+  </div>
+</div>
+
+<!-- ══════ 時間九宮格（24H制）══════ -->
+<div class="tp-wrap" id="tp-wrap">
+  <div class="tp-box">
+    <div class="tp-fieldname" id="tp-field">時間輸入（24小時制）</div>
+    <div class="tp-disp">
+      <div class="tp-seg empty" id="tp-hh">--</div>
+      <div class="tp-colon">:</div>
+      <div class="tp-seg empty" id="tp-mm">--</div>
+    </div>
+    <div class="tp-hint-wrap">
+      <span class="tp-hint ph" id="tp-hint">請輸入小時（00～23）</span>
+    </div>
+    <div class="tp-grid">
+      <button type="button" class="tp-key" onclick="tpKey('7')">7</button>
+      <button type="button" class="tp-key" onclick="tpKey('8')">8</button>
+      <button type="button" class="tp-key" onclick="tpKey('9')">9</button>
+      <button type="button" class="tp-key" onclick="tpKey('4')">4</button>
+      <button type="button" class="tp-key" onclick="tpKey('5')">5</button>
+      <button type="button" class="tp-key" onclick="tpKey('6')">6</button>
+      <button type="button" class="tp-key" onclick="tpKey('1')">1</button>
+      <button type="button" class="tp-key" onclick="tpKey('2')">2</button>
+      <button type="button" class="tp-key" onclick="tpKey('3')">3</button>
+      <button type="button" class="tp-key tp-clr" onclick="tpClear()">清除</button>
+      <button type="button" class="tp-key" onclick="tpKey('0')">0</button>
+      <button type="button" class="tp-key tp-back" onclick="tpBack()">⌫</button>
+    </div>
+    <button type="button" class="tp-confirm" id="tp-confirm" onclick="tpDone()" disabled>✓ 確認</button>
+  </div>
+</div>
+
+<script>
+/* ── 常數 ── */
+const BEDS=['隔離室','8021','8022','8061','8062','8063','8081',
+  '8101','8102','8103','8121','8122','8123','8161','8162','8163',
+  '8181','8182','8183','8201','8202','8203','8221','8222','8223',
+  '8261','8262','8263','8281','8282','8283'];
+const SNMS={D:'白班',E:'小夜班',N:'大夜班'};
+const GNMS={A:'A組',B:'B組',C:'C組'};
+
+/* ── 狀態 ── */
+const S={lv:0,date:'',recId:'',bedId:'',dtab:'feed'};
+
+/* ── 資料 ── */
+let DB=[];  // 主資料陣列
+
+/* ═══════════════════════════════════════
+   資料存取
+═══════════════════════════════════════ */
+async function load(){
+  try{
+    const r=await window.storage.get('a13v3');
+    if(r?.value){
+      const parsed=fromXML(r.value);
+      if(parsed!==null){          // null = 解析錯誤
+        DB=parsed;
+        try{localStorage.setItem('a13v3_bak',r.value);}catch{}
+        return;
+      }
+    }
+    // window.storage 無資料或解析失敗 → 嘗試 localStorage 備份
+    const bak=localStorage.getItem('a13v3_bak');
+    if(bak){const p=fromXML(bak);if(p!==null)DB=p;}
+  }catch{
+    try{
+      const bak=localStorage.getItem('a13v3_bak');
+      if(bak){const p=fromXML(bak);if(p!==null)DB=p;}
+    }catch{DB=[];}
+  }
+}
+async function persist(){
+  if(!DB||DB.length===0){
+    // 若 DB 是空的，先確認 storage 也是空的才允許儲存，防止意外清空
+    try{
+      const r=await window.storage.get('a13v3');
+      if(r?.value&&r.value.includes('<record')){
+        console.warn('persist() 阻止：DB 為空但 storage 有資料，跳過儲存');
+        return; // 保護：不覆蓋有資料的 storage
+      }
+    }catch{}
+  }
+  const xml=toXML(DB);
+  try{await window.storage.set('a13v3',xml);}catch(e){console.error('storage 儲存失敗:',e);}
+  // 同步備份至 localStorage（雙保險）
+  try{localStorage.setItem('a13v3_bak',xml);}catch{}
+}
+
+/* ═══════════════════════════════════════
+   資料修復：修正舊格式錯誤的 ID 與 serial
+   舊格式：20260428NB018202001（缺少類型碼 F/O/M）
+   新格式：20260428NB018202O01（含類型碼）
+═══════════════════════════════════════ */
+async function migrateDB(){
+  let changed = false;
+  DB.forEach(r => {
+    (r.beds||[]).forEach(b => {
+      // ── 餵食明細 ──
+      (b.feedDetails||[]).forEach((f, i) => {
+        const sn = String(i+1).padStart(2,'0');
+        const correctId = mkFeedId(b.id, sn);
+        if(f.id !== correctId || f.serial !== sn){
+          f.id = correctId; f.serial = sn; changed = true;
+        }
+      });
+      // ── 排出明細 ──
+      (b.outputDetails||[]).forEach((o, i) => {
+        const sn = String(i+1).padStart(2,'0');
+        const correctId = mkOutId(b.id, sn);
+        if(o.id !== correctId || o.serial !== sn){
+          o.id = correctId; o.serial = sn; changed = true;
+        }
+      });
+      // ── 體重腹圍明細 ──
+      (b.metricDetails||[]).forEach((m, i) => {
+        const sn = String(i+1).padStart(2,'0');
+        const correctId = mkMetId(b.id, sn);
+        if(m.id !== correctId || m.serial !== sn){
+          m.id = correctId; m.serial = sn; changed = true;
+        }
+      });
+    });
+  });
+  if(changed){
+    await persist(); // 修正後立即儲存
+    console.log('migrateDB：已修正舊格式 ID 並重新儲存');
+  }
+}
+function fromXML(str){
+  if(!str||!str.includes('<record'))return []; // 確實是空資料
+  try{
+    const doc=new DOMParser().parseFromString(str,'text/xml');
+    if(doc.querySelector('parsererror')){console.error('XML 解析錯誤');return null;}
+    return cels(doc.documentElement,'record').map(r=>({
+      id:r.getAttribute('id')||'',
+      date:ct(r,'date'),shift:ct(r,'shift'),group:ct(r,'group'),serial:ct(r,'serial'),
+      nurseName:ct(r,'nurseName'),unit:ct(r,'unit'),empNo:ct(r,'empNo'),
+      createdAt:ct(r,'createdAt'),updatedAt:ct(r,'updatedAt'),
+      beds:cels(cel(r,'beds'),'bed').map(b=>({
+        id:b.getAttribute('id')||'',
+        bedNo:ct(b,'bedNo'),notes:ct(b,'notes'),createdAt:ct(b,'createdAt'),
+        feedDetails:cels(cel(b,'feedDetails'),'feedDetail').map(f=>({
+          id:f.getAttribute('id')||'',serial:ct(f,'serial'),feedTime:ct(f,'feedTime'),
+          milk:ct(f,'milk'),feedWater:ct(f,'feedWater'),protein:ct(f,'protein'),
+          medWater:ct(f,'medWater'),directFeed:ct(f,'directFeed'),
+          otherFeed:ct(f,'otherFeed'),subtotal:ct(f,'subtotal'),createdAt:ct(f,'createdAt')
+        })),
+        outputDetails:cels(cel(b,'outputDetails'),'outputDetail').map(o=>({
+          id:o.getAttribute('id')||'',serial:ct(o,'serial'),outputTime:ct(o,'outputTime'),
+          urine:ct(o,'urine'),stool:ct(o,'stool'),combined:ct(o,'combined'),
+          drain:ct(o,'drain'),createdAt:ct(o,'createdAt')
+        })),
+        metricDetails:cels(cel(b,'metricDetails'),'metricDetail').map(m=>({
+          id:m.getAttribute('id')||'',serial:ct(m,'serial'),metricTime:ct(m,'metricTime'),
+          weight:ct(m,'weight'),prevWeight:ct(m,'prevWeight'),
+          turnDir:ct(m,'turnDir'),turnTime:ct(m,'turnTime'),
+          abdomen:ct(m,'abdomen'),urineBag:ct(m,'urineBag'),createdAt:ct(m,'createdAt')
+        }))
+      }))
+    }));
+  }catch(e){console.error('fromXML 例外:',e);return null;}
+}
+// DOM 輔助
+function ct(el,tag){for(const c of el.children)if(c.tagName===tag)return c.textContent;return'';}
+function cel(el,tag){for(const c of el.children)if(c.tagName===tag)return c;
+  const dummy=document.createElement('_');return dummy;}
+function cels(el,tag){return Array.from(el.children).filter(c=>c.tagName===tag);}
+
+/* ═══════════════════════════════════════
+   XML 序列化（三階）
+═══════════════════════════════════════ */
+function toXML(db){
+  let x='<?xml version="1.0" encoding="UTF-8"?>\n<a13Records>\n';
+  db.forEach(r=>{
+    x+=`  <record id="${xe(r.id)}">\n`;
+    ['date','shift','group','serial','nurseName','unit','empNo','createdAt','updatedAt']
+      .forEach(k=>x+=`    <${k}>${xe(r[k])}</${k}>\n`);
+    x+=`    <beds>\n`;
+    (r.beds||[]).forEach(b=>{
+      x+=`      <bed id="${xe(b.id)}">\n`;
+      x+=`        <bedNo>${xe(b.bedNo)}</bedNo>\n`;
+      x+=`        <notes>${xe(b.notes)}</notes>\n`;
+      x+=`        <createdAt>${xe(b.createdAt)}</createdAt>\n`;
+      x+=`        <feedDetails>\n`;
+      (b.feedDetails||[]).forEach(f=>{
+        x+=`          <feedDetail id="${xe(f.id)}">\n`;
+        ['serial','feedTime','milk','feedWater','protein','medWater',
+         'directFeed','otherFeed','subtotal','createdAt'].forEach(k=>
+          x+=`            <${k}>${xe(f[k])}</${k}>\n`);
+        x+=`          </feedDetail>\n`;
+      });
+      x+=`        </feedDetails>\n        <outputDetails>\n`;
+      (b.outputDetails||[]).forEach(o=>{
+        x+=`          <outputDetail id="${xe(o.id)}">\n`;
+        ['serial','outputTime','urine','stool','combined','drain','createdAt'].forEach(k=>
+          x+=`            <${k}>${xe(o[k])}</${k}>\n`);
+        x+=`          </outputDetail>\n`;
+      });
+      x+=`        </outputDetails>\n        <metricDetails>\n`;
+      (b.metricDetails||[]).forEach(m=>{
+        x+=`          <metricDetail id="${xe(m.id)}">\n`;
+        ['serial','metricTime','weight','prevWeight','turnDir',
+         'turnTime','abdomen','urineBag','createdAt'].forEach(k=>
+          x+=`            <${k}>${xe(m[k])}</${k}>\n`);
+        x+=`          </metricDetail>\n`;
+      });
+      x+=`        </metricDetails>\n      </bed>\n`;
+    });
+    x+=`    </beds>\n  </record>\n`;
+  });
+  return x+'</a13Records>';
+}
+function xe(v){if(!v&&v!==0)return '';return String(v)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+/* ═══════════════════════════════════════
+   流水號（每日/每床分開計數）
+═══════════════════════════════════════ */
+/* ── 序號：直接從陣列長度計算，最可靠 ── */
+function nextFeedSN(bed){ return String((bed.feedDetails||[]).length+1).padStart(2,'0'); }
+function nextOutSN(bed){  return String((bed.outputDetails||[]).length+1).padStart(2,'0'); }
+function nextMetSN(bed){  return String((bed.metricDetails||[]).length+1).padStart(2,'0'); }
+// 主檔序號仍用當日已有筆數+1
+function nextRecSN(date){ return String(DB.filter(r=>r.date===date).length+1).padStart(2,'0'); }
+// ID 工廠
+function mkRecId(d,sh,gr,sn){return d.replace(/-/g,'')+sh+gr+sn;}
+function mkBedId(rid,bed){return rid+bed;}
+function mkFeedId(bid,sn){return bid+'F'+sn;}
+function mkOutId(bid,sn){return bid+'O'+sn;}
+function mkMetId(bid,sn){return bid+'M'+sn;}
+
+/* ═══════════════════════════════════════
+   日期工具
+═══════════════════════════════════════ */
+function td2s(d){return`${d.getFullYear()}-${('0'+(d.getMonth()+1)).slice(-2)}-${('0'+d.getDate()).slice(-2)}`;}
+function disp(s){if(!s)return'';const[y,m,d]=s.split('-');return`${y}年${m}月${d}日`;}
+
+/* ═══════════════════════════════════════
+   查找工具
+═══════════════════════════════════════ */
+function findRec(id){return DB.find(r=>r.id===id);}
+function findBed(recId,bedId){const r=findRec(recId);return r?.beds?.find(b=>b.id===bedId);}
+
+/* ═══════════════════════════════════════
+   月曆
+═══════════════════════════════════════ */
+let calY,calM;
+function drawCal(){
+  document.getElementById('cal-title').textContent=`${calY}年${calM+1}月`;
+  const today=td2s(new Date());
+  const hasDates=new Set(DB.map(r=>r.date));
+  const fd=new Date(calY,calM,1).getDay();
+  const dim=new Date(calY,calM+1,0).getDate();
+  const prev=new Date(calY,calM,0).getDate();
+  let h='';
+  for(let i=fd-1;i>=0;i--){const fd2=td2s(new Date(calY,calM-1,prev-i));h+=dayCell(prev-i,fd2,true,today,hasDates);}
+  for(let d=1;d<=dim;d++){const fd2=td2s(new Date(calY,calM,d));h+=dayCell(d,fd2,false,today,hasDates);}
+  const used=fd+dim,rest=(Math.ceil(used/7)*7)-used;
+  for(let d=1;d<=rest;d++){const fd2=td2s(new Date(calY,calM+1,d));h+=dayCell(d,fd2,true,today,hasDates);}
+  document.getElementById('cal-grid').innerHTML=h;
+}
+function dayCell(d,fd,other,today,hasDates){
+  let cls='cal-day';
+  if(other)cls+=' other';if(fd===today)cls+=' today';if(fd===S.date)cls+=' sel';
+  const dot=hasDates.has(fd)?'<div class="cal-dot"></div>':'';
+  return`<div class="${cls}" onclick="pickDay('${fd}')"><span class="dn">${d}</span>${dot}</div>`;
+}
+function calMove(d){calM+=d;if(calM>11){calM=0;calY++;}if(calM<0){calM=11;calY--;}drawCal();}
+function pickDay(d){S.date=d;drawCal();goLevel(1);}
+
+/* ═══════════════════════════════════════
+   導航（三階）
+═══════════════════════════════════════ */
+function goLevel(lv,params={}){
+  S.lv=lv;
+  if(params.recId!==undefined)S.recId=params.recId;
+  if(params.bedId!==undefined)S.bedId=params.bedId;
+  if(params.dtab!==undefined)S.dtab=params.dtab;
+  goTab('rec');
+  renderBC();
+  renderContent();
+}
+
+function renderBC(){
+  let h=`<span class="bc-item" onclick="goTab('cal')">📅 月曆</span>`;
+  if(S.lv>=1){
+    const cls=S.lv===1?'bc-item cur':'bc-item';
+    h+=`<span class="bc-sep">›</span>
+        <span class="${cls}" onclick="goLevel(1)">${disp(S.date)}</span>`;
+  }
+  if(S.lv>=2&&S.recId){
+    const r=findRec(S.recId);
+    const lbl=r?`${SNMS[r.shift]||''}${GNMS[r.group]||''}`:'';
+    const cls=S.lv===2?'bc-item cur':'bc-item';
+    h+=`<span class="bc-sep">›</span>
+        <span class="${cls}" onclick="goLevel(2,{recId:'${S.recId}'})">${S.recId}<small> (${lbl})</small></span>`;
+  }
+  if(S.lv>=3&&S.bedId){
+    const bed=findBed(S.recId,S.bedId);
+    h+=`<span class="bc-sep">›</span>
+        <span class="bc-item cur">🛏 床號 ${bed?.bedNo||''}</span>`;
+  }
+  document.getElementById('bc-bar').innerHTML=h;
+}
+
+function renderContent(){
+  const el=document.getElementById('rec-content');
+  if(S.lv===1){el.innerHTML=renderL1();}
+  else if(S.lv===2){el.innerHTML=renderL2();}
+  else if(S.lv===3){el.innerHTML=renderL3();}
+}
+
+/* ═══════════════════════════════════════
+   第一階：紀錄列表
+═══════════════════════════════════════ */
+function renderL1(){
+  const dayRecs=DB.filter(r=>r.date===S.date);
+  let h=`<div class="sec-bar">
+    <h3 style="color:var(--c1)">📋 ${disp(S.date)} 護理主檔</h3>
+    <div class="btns">
+      <button type="button" class="btn btn-c1" onclick="openRecForm()">＋ 新增主檔</button>
+    </div>
+  </div>`;
+  if(!dayRecs.length){
+    return h+`<div class="empty"><div class="icon">📄</div>
+      <div>此日期尚無護理主檔記錄</div>
+      <div style="margin-top:10px"><button type="button" class="btn btn-c1" onclick="openRecForm()">＋ 新增第一筆</button></div></div>`;
+  }
+  dayRecs.forEach(r=>{
+    const bedCnt=r.beds?.length||0;
+    const fCnt=(r.beds||[]).reduce((s,b)=>s+(b.feedDetails?.length||0),0);
+    const oCnt=(r.beds||[]).reduce((s,b)=>s+(b.outputDetails?.length||0),0);
+    const mCnt=(r.beds||[]).reduce((s,b)=>s+(b.metricDetails?.length||0),0);
+    h+=`<div class="rec-row">
+      <div class="drill" onclick="goLevel(2,{recId:'${r.id}'})">
+        <div class="id-badge">${r.id}</div>
+        <div class="row-title">${SNMS[r.shift]||''} ／ ${GNMS[r.group]||''} ／ ${r.nurseName||''} ${r.unit||''} ${r.empNo||''}</div>
+        <div class="row-sub">
+          床號：<b>${bedCnt}</b> 個 ｜
+          <span class="badge-pill pill-feed">餵食 ${fCnt}</span>
+          <span class="badge-pill pill-out">排出 ${oCnt}</span>
+          <span class="badge-pill pill-met">體重 ${mCnt}</span>
+          ｜ ${(r.updatedAt||'').substring(0,16)}
+        </div>
+      </div>
+      <div class="acts">
+        <button type="button" class="btn btn-c1 btn-xs" onclick="openRecForm('${r.id}')">✏ 修改</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delRec('${r.id}')">🗑</button>
+      </div>
+    </div>`;
+  });
+  return h;
+}
+
+/* ═══════════════════════════════════════
+   第二階：床號列表 + 試算表摘要
+═══════════════════════════════════════ */
+function renderL2(){
+  const r=findRec(S.recId);
+  if(!r)return'<div class="empty"><div class="icon">❌</div><div>找不到記錄</div></div>';
+  const beds=r.beds||[];
+
+  let h=`<div class="sec-bar">
+    <h3 style="color:var(--bed-h)">🛏 床號主檔 ／ ${r.id}</h3>
+    <div class="btns">
+      <button type="button" class="btn btn-bed" onclick="openBedForm()">＋ 新增床號</button>
+    </div>
+  </div>`;
+
+  if(!beds.length){
+    h+=`<div class="empty"><div class="icon">🛏</div><div>尚未新增任何床號</div>
+      <div style="margin-top:10px"><button type="button" class="btn btn-bed" onclick="openBedForm()">＋ 新增床號</button></div></div>`;
+    return h;
+  }
+
+  /* ── 試算表摘要 ── */
+  h+=`<div class="sheet-wrap"><table class="sht">
+    <thead>
+      <tr class="sht-hdr">
+        <th rowspan="2">床號</th>
+        <th colspan="7" class="s-feed">餵食</th>
+        <th colspan="4" style="background:#388e3c">排出</th>
+        <th colspan="5" style="background:#1565c0">體重腹圍</th>
+        <th rowspan="2">操作</th>
+      </tr>
+      <tr class="sht-sub">
+        <th class="s-feed">奶</th><th class="s-feed">水</th><th class="s-feed">高蛋白</th>
+        <th class="s-feed">藥+水</th><th class="s-feed">餵水</th><th class="s-feed">其他</th>
+        <th class="s-sub">小計</th>
+        <th class="s-urine">尿量</th><th class="s-drain">屎量</th>
+        <th class="s-drain">尿與屎</th><th class="s-drain">引流</th>
+        <th class="s-wt">體重</th><th class="s-wt">前次</th>
+        <th class="s-turn">翻身↑</th><th class="s-abd">腹圍</th><th>尿袋</th>
+      </tr>
+    </thead><tbody>`;
+
+  beds.forEach(b=>{
+    // 計算餵食合計
+    const fs=b.feedDetails||[];
+    const sumF=k=>fs.reduce((a,f)=>a+num(f[k]),0)||'';
+    const totSub=fs.reduce((a,f)=>a+num(f.subtotal),0)||'';
+    // 排出合計
+    const os=b.outputDetails||[];
+    const sumO=k=>os.reduce((a,o)=>a+num(o[k]),0)||'';
+    // 最新體重
+    const ms=b.metricDetails||[];
+    const lm=ms[ms.length-1]||{};
+
+    h+=`<tr>
+      <td class="sht-bed" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})" style="cursor:pointer;text-decoration:underline">${b.bedNo}</td>
+      <td class="s-feed">${sumF('milk')}</td><td class="s-feed">${sumF('feedWater')}</td>
+      <td class="s-feed">${sumF('protein')}</td><td class="s-feed">${sumF('medWater')}</td>
+      <td class="s-feed">${sumF('directFeed')}</td><td class="s-feed">${sumF('otherFeed')}</td>
+      <td class="s-sub">${totSub}</td>
+      <td class="s-urine">${sumO('urine')}</td>
+      <td class="s-drain">${sumO('stool')}</td>
+      <td class="s-drain">${sumO('combined')}</td>
+      <td class="s-drain">${sumO('drain')}</td>
+      <td class="s-wt">${lm.weight||''}</td><td class="s-wt">${lm.prevWeight||''}</td>
+      <td class="s-turn">${lm.turnDir||''} ${lm.turnTime||''}</td>
+      <td class="s-abd">${lm.abdomen||''}</td><td>${lm.urineBag||''}</td>
+      <td>
+        <button type="button" class="btn btn-c1 btn-xs" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">明細</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delBed('${b.id}')">🗑</button>
+      </td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+
+  /* ── 床號卡片列表 ── */
+  beds.forEach(b=>{
+    const fc=b.feedDetails?.length||0,oc=b.outputDetails?.length||0,mc=b.metricDetails?.length||0;
+    h+=`<div class="rec-row">
+      <div class="drill" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">
+        <div class="id-badge" style="background:var(--bed-h)">${b.id}</div>
+        <div class="row-title">床號 ${b.bedNo}${b.notes?' ／ '+b.notes:''}</div>
+        <div class="row-sub">
+          <span class="badge-pill pill-feed">🍼 餵食 ${fc} 筆</span>
+          <span class="badge-pill pill-out">💧 排出 ${oc} 筆</span>
+          <span class="badge-pill pill-met">⚖️ 體重腹圍 ${mc} 筆</span>
+        </div>
+      </div>
+      <div class="acts">
+        <button type="button" class="btn btn-c1 btn-xs" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">明細 →</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delBed('${b.id}')">🗑</button>
+      </div>
+    </div>`;
+  });
+  return h;
+}
+
+/* ═══════════════════════════════════════
+   第三階：三個明細 Tab
+═══════════════════════════════════════ */
+function renderL3(){
+  const r=findRec(S.recId);
+  const bed=findBed(S.recId,S.bedId);
+  if(!bed)return'<div class="empty"><div class="icon">❌</div><div>找不到床號</div></div>';
+
+  const tabs=[
+    {key:'feed',label:'🍼 餵食明細',cls:'feed-tab'},
+    {key:'output',label:'💧 排出明細',cls:'out-tab'},
+    {key:'metric',label:'⚖️ 體重腹圍',cls:'met-tab'}
+  ];
+
+  let h=`<div style="margin-bottom:12px;font-size:18px;color:var(--gray)">
+    <b style="color:var(--bed-h)">床號 ${bed.bedNo}</b> ／ 紀錄 ${S.recId}
+    <span style="margin-left:8px;font-size:15px">(鍵值：<code>${S.bedId}</code>)</span>
+  </div>`;
+
+  h+=`<div class="detail-tabs">`;
+  tabs.forEach(t=>{
+    const on=S.dtab===t.key?' on':'';
+    h+=`<div class="dtab ${t.cls}${on}" onclick="switchDTab('${t.key}')">${t.label}</div>`;
+  });
+  h+=`</div>`;
+
+  // 餵食明細 panel
+  h+=`<div class="dtab-panel feed-panel${S.dtab==='feed'?' on':''}" id="dp-feed">
+    <div class="sec-bar">
+      <h4 style="color:var(--feed-h)">🍼 餵食明細 (第三階-A)</h4>
+      <button type="button" class="btn btn-feed btn-sm" onclick="openFeedForm()">＋ 新增餵食</button>
+    </div>
+    ${renderFeedTable(bed)}
+  </div>`;
+
+  // 排出明細 panel
+  h+=`<div class="dtab-panel out-panel${S.dtab==='output'?' on':''}" id="dp-output">
+    <div class="sec-bar">
+      <h4 style="color:var(--out-h)">💧 排出明細 (第三階-B)</h4>
+      <button type="button" class="btn btn-out btn-sm" onclick="openOutForm()">＋ 新增排出</button>
+    </div>
+    ${renderOutTable(bed)}
+  </div>`;
+
+  // 體重腹圍 panel
+  h+=`<div class="dtab-panel met-panel${S.dtab==='metric'?' on':''}" id="dp-metric">
+    <div class="sec-bar">
+      <h4 style="color:var(--met-h)">⚖️ 體重腹圍明細 (第三階-C)</h4>
+      <button type="button" class="btn btn-met btn-sm" onclick="openMetForm()">＋ 新增體重腹圍</button>
+    </div>
+    ${renderMetTable(bed)}
+  </div>`;
+
+  return h;
+}
+
+function renderFeedTable(bed){
+  const rows=bed.feedDetails||[];
+  if(!rows.length)return'<div class="empty"><div class="icon">🍼</div><div>尚無餵食明細</div></div>';
+  let h=`<div style="overflow-x:auto"><table class="det det-feed">
+    <thead><tr>
+      <th>鍵值 ID</th><th>序號</th><th>時間</th><th>奶(ml)</th><th>水(ml)</th>
+      <th>高蛋白</th><th>藥+水</th><th>餵水</th><th>其他</th><th>小計</th><th>操作</th>
+    </tr></thead><tbody>`;
+  rows.forEach((f,idx)=>{
+    h+=`<tr>
+      <td class="det-key">${f.id}</td>
+      <td>${f.serial}</td><td>${f.feedTime}</td>
+      <td class="s-feed">${f.milk}</td><td class="s-feed">${f.feedWater}</td>
+      <td class="s-feed">${f.protein}</td><td class="s-feed">${f.medWater}</td>
+      <td class="s-feed">${f.directFeed}</td><td class="s-feed">${f.otherFeed}</td>
+      <td class="s-sub">${f.subtotal}</td>
+      <td>
+        <button type="button" class="btn btn-feed btn-xs" onclick="openFeedForm(${idx})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delFeed('${f.id}')">🗑</button>
+      </td>
+    </tr>`;
+  });
+  // ── 小計列（1筆以上才顯示）──
+  const sm = k => rows.reduce((a,f)=>a+num(f[k]),0);
+  const totalSub = rows.reduce((a,f)=>a+num(f.subtotal),0);
+  h+=`<tr class="det-total det-feed-tot">
+    <td colspan="3" class="tot-lbl">📊 合計（${rows.length} 筆）</td>
+    <td class="s-feed">${sm('milk')||''}</td>
+    <td class="s-feed">${sm('feedWater')||''}</td>
+    <td class="s-feed">${sm('protein')||''}</td>
+    <td class="s-feed">${sm('medWater')||''}</td>
+    <td class="s-feed">${sm('directFeed')||''}</td>
+    <td class="s-feed">${sm('otherFeed')||''}</td>
+    <td class="s-sub">${totalSub||''}</td>
+    <td></td>
+  </tr>`;
+  return h+`</tbody></table></div>`;
+}
+
+function renderOutTable(bed){
+  const rows=bed.outputDetails||[];
+  if(!rows.length)return'<div class="empty"><div class="icon">💧</div><div>尚無排出明細</div></div>';
+  let h=`<div style="overflow-x:auto"><table class="det det-out">
+    <thead><tr>
+      <th>鍵值 ID</th><th>序號</th><th>時間</th>
+      <th>尿量(ml)</th><th>屎量(ml)</th><th>尿與屎</th><th>引流(ml)</th><th>操作</th>
+    </tr></thead><tbody>`;
+  rows.forEach((o,idx)=>{
+    h+=`<tr>
+      <td class="det-key">${o.id}</td>
+      <td>${o.serial}</td><td>${o.outputTime}</td>
+      <td class="s-urine">${o.urine}</td>
+      <td class="s-drain">${o.stool}</td>
+      <td class="s-drain">${o.combined}</td>
+      <td class="s-drain">${o.drain}</td>
+      <td>
+        <button type="button" class="btn btn-out btn-xs" onclick="openOutForm(${idx})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delOut('${o.id}')">🗑</button>
+      </td>
+    </tr>`;
+  });
+  // ── 小計列（1筆以上才顯示）──
+  const so = k => rows.reduce((a,o)=>a+num(o[k]),0);
+  h+=`<tr class="det-total det-out-tot">
+    <td colspan="3" class="tot-lbl">📊 合計（${rows.length} 筆）</td>
+    <td class="s-urine">${so('urine')||''}</td>
+    <td class="s-drain">${so('stool')||''}</td>
+    <td class="s-drain">${so('combined')||''}</td>
+    <td class="s-drain">${so('drain')||''}</td>
+    <td></td>
+  </tr>`;
+  return h+`</tbody></table></div>`;
+}
+
+function renderMetTable(bed){
+  const rows=bed.metricDetails||[];
+  if(!rows.length)return'<div class="empty"><div class="icon">⚖️</div><div>尚無體重腹圍明細</div></div>';
+  let h=`<div style="overflow-x:auto"><table class="det det-met">
+    <thead><tr>
+      <th>鍵值 ID</th><th>序號</th><th>時間</th>
+      <th>體重</th><th>前次體重</th><th>翻身↑</th><th>翻身時間</th>
+      <th>腹圍</th><th>尿袋</th><th>操作</th>
+    </tr></thead><tbody>`;
+  rows.forEach((m,idx)=>{
+    h+=`<tr>
+      <td class="det-key">${m.id}</td>
+      <td>${m.serial}</td><td>${m.metricTime}</td>
+      <td class="s-wt">${m.weight}</td><td class="s-wt">${m.prevWeight}</td>
+      <td class="s-turn">${m.turnDir}</td><td class="s-turn">${m.turnTime}</td>
+      <td class="s-abd">${m.abdomen}</td><td>${m.urineBag}</td>
+      <td>
+        <button type="button" class="btn btn-met btn-xs" onclick="openMetForm(${idx})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delMet('${m.id}')">🗑</button>
+      </td>
+    </tr>`;
+  });
+  return h+`</tbody></table></div>`;
+}
+
+function switchDTab(tab){S.dtab=tab;renderContent();}
+
+/* ═══════════════════════════════════════
+   CRUD：第一階（主檔）
+═══════════════════════════════════════ */
+let editRecId=null;
+function openRecForm(id){
+  editRecId=id||null;
+  const r=id?findRec(id):null;
+  document.getElementById('rec-form-title').textContent=id?'修改護理主檔':'新增護理主檔記錄';
+  document.getElementById('rf-date').value=r?.date||S.date||td2s(new Date());
+  document.getElementById('rf-sh').value=r?.shift||'D';
+  document.getElementById('rf-gr').value=r?.group||'A';
+  document.getElementById('rf-unit').value=r?.unit||'';
+  document.getElementById('rf-emp').value=r?.empNo||'';
+  // 姓名：先嘗試從 CAREGIVERS 找，找不到就用舊值
+  const cg=CAREGIVERS.find(c=>c.empNo===r?.empNo);
+  document.getElementById('rf-nm').value=cg?.name||r?.nurseName||'';
+  previewRecId();
+  openOv('ov-rec');
+}
+function previewRecId(){
+  if(editRecId){document.getElementById('rec-id-preview').textContent=editRecId;return;}
+  const d=document.getElementById('rf-date').value;
+  const sh=document.getElementById('rf-sh').value;
+  const gr=document.getElementById('rf-gr').value;
+  document.getElementById('rec-id-preview').textContent=d?`${d.replace(/-/g,'')}${sh}${gr}__（流水號儲存時產生）`:'—';
+}
+async function saveRec(){
+  const date=document.getElementById('rf-date').value;
+  if(!date){showMsg('請填入日期','err');return;}
+  const shift=document.getElementById('rf-sh').value;
+  const group=document.getElementById('rf-gr').value;
+  const nurseName=document.getElementById('rf-nm').value.trim();
+  const unit=document.getElementById('rf-unit').value.trim();
+  const empNo=document.getElementById('rf-emp').value.trim();
+  const now=new Date().toISOString();
+  if(editRecId){
+    const idx=DB.findIndex(r=>r.id===editRecId);
+    if(idx>=0){
+      const sn=DB[idx].serial;
+      const newId=mkRecId(date,shift,group,sn);
+      DB[idx]={...DB[idx],id:newId,date,shift,group,nurseName,unit,empNo,updatedAt:now};
+    }
+    showMsg(`主檔 ${editRecId} 已更新`,'ok');
+  }else{
+    const sn=nextRecSN(date);
+    const id=mkRecId(date,shift,group,sn);
+    DB.push({id,date,shift,group,serial:sn,nurseName,unit,empNo,
+      createdAt:now,updatedAt:now,beds:[]});
+    S.date=date;
+    showMsg(`主檔 ${id} 已新增`,'ok');
+  }
+  await persist();
+  closeOv('ov-rec');drawCal();goLevel(1);
+}
+async function delRec(id){
+  if(!confirm(`確定刪除主檔 ${id}？（含所有床號及明細，無法復原）`))return;
+  DB=DB.filter(r=>r.id!==id);
+  await persist();drawCal();goLevel(1);showMsg(`主檔 ${id} 已刪除`,'ok');
+}
+
+/* ═══════════════════════════════════════
+   CRUD：第二階（床號主檔）
+═══════════════════════════════════════ */
+let editBedId=null;
+function openBedForm(bid){
+  editBedId=bid||null;
+  const bed=bid?findBed(S.recId,bid):null;
+  document.getElementById('bed-form-title').textContent=bid?'修改床號主檔':'新增床號（第二階）';
+  document.getElementById('bf-bed').value=bed?.bedNo||'';
+  document.getElementById('bf-notes').value=bed?.notes||'';
+  previewBedId();
+  openOv('ov-bed');
+}
+function previewBedId(){
+  const bed=document.getElementById('bf-bed').value;
+  document.getElementById('bed-id-preview').textContent=bed?mkBedId(S.recId,bed):'（請選擇床號）';
+}
+async function saveBed(){
+  const bedNo=document.getElementById('bf-bed').value;
+  if(!bedNo){showMsg('請選擇床號','err');return;}
+  const notes=document.getElementById('bf-notes').value.trim();
+  const r=findRec(S.recId);if(!r)return;
+  const now=new Date().toISOString();
+  if(editBedId){
+    const b=r.beds.find(x=>x.id===editBedId);
+    if(b){b.bedNo=bedNo;b.notes=notes;}
+    showMsg(`床號 ${editBedId} 已更新`,'ok');
+  }else{
+    const id=mkBedId(S.recId,bedNo);
+    if(r.beds.find(b=>b.id===id)){showMsg('此床號已存在','err');return;}
+    r.beds.push({id,bedNo,notes,createdAt:now,feedDetails:[],outputDetails:[],metricDetails:[]});
+    showMsg(`床號 ${bedNo} 已新增（ID: ${id}）`,'ok');
+  }
+  await persist();closeOv('ov-bed');goLevel(2,{recId:S.recId});
+}
+async function delBed(bid){
+  const bed=findBed(S.recId,bid);
+  if(!confirm(`確定刪除床號 ${bed?.bedNo||bid}？（含所有明細，無法復原）`))return;
+  const r=findRec(S.recId);
+  if(r)r.beds=r.beds.filter(b=>b.id!==bid);
+  await persist();goLevel(2,{recId:S.recId});showMsg(`床號 ${bid} 已刪除`,'ok');
+}
+
+/* ═══════════════════════════════════════
+   CRUD：第三階-A（餵食明細）
+═══════════════════════════════════════ */
+let editFeedId=null;
+function openFeedForm(idx){
+  const bed=findBed(S.recId,S.bedId);
+  // idx 有值=修改，undefined=新增
+  const f=(idx!==undefined&&idx!==null)?bed?.feedDetails?.[idx]??null:null;
+  editFeedId=f?f.id:null;
+  document.getElementById('feed-form-title').textContent=f?'🍼 修改餵食明細':'🍼 新增餵食明細';
+  document.getElementById('feed-id-preview').textContent=f?f.id:`${S.bedId}F__（新增時產生）`;
+  document.getElementById('ff-time').value=f?.feedTime||'';
+  document.getElementById('ff-milk').value=f?.milk||'';
+  document.getElementById('ff-fw').value=f?.feedWater||'';
+  document.getElementById('ff-pro').value=f?.protein||'';
+  document.getElementById('ff-mw').value=f?.medWater||'';
+  document.getElementById('ff-df').value=f?.directFeed||'';
+  document.getElementById('ff-of').value=f?.otherFeed||'';
+  document.getElementById('ff-sub').value=f?.subtotal||'';
+  openOv('ov-feed');
+}
+function calcFeedSub(){
+  const vals=['ff-milk','ff-fw','ff-pro','ff-mw','ff-df','ff-of']
+    .map(id=>num(document.getElementById(id).value));
+  const tot=vals.reduce((a,b)=>a+b,0);
+  document.getElementById('ff-sub').value=tot||'';
+}
+async function saveFeed(){
+  const bed=findBed(S.recId,S.bedId);if(!bed)return;
+  const now=new Date().toISOString();
+  const data={
+    feedTime:v('ff-time'),milk:v('ff-milk'),feedWater:v('ff-fw'),
+    protein:v('ff-pro'),medWater:v('ff-mw'),directFeed:v('ff-df'),
+    otherFeed:v('ff-of'),subtotal:v('ff-sub'),createdAt:now
+  };
+  if(editFeedId){
+    const f=bed.feedDetails.find(x=>x.id===editFeedId);
+    if(f)Object.assign(f,data);
+    showMsg(`餵食明細 ${editFeedId} 已更新`,'ok');
+  }else{
+    const sn=nextFeedSN(bed);
+    const id=mkFeedId(S.bedId,sn);
+    bed.feedDetails.push({id,serial:sn,...data});
+    showMsg(`餵食明細 ${id} 已新增`,'ok');
+  }
+  await persist();closeOv('ov-feed');renderContent();
+}
+async function delFeed(fid){
+  if(!confirm(`確定刪除餵食明細 ${fid}？`))return;
+  const bed=findBed(S.recId,S.bedId);
+  if(bed)bed.feedDetails=bed.feedDetails.filter(f=>f.id!==fid);
+  await persist();renderContent();showMsg(`餵食明細 ${fid} 已刪除`,'ok');
+}
+
+/* ═══════════════════════════════════════
+   CRUD：第三階-B（排出明細）
+═══════════════════════════════════════ */
+let editOutId=null;
+function openOutForm(idx){
+  const bed=findBed(S.recId,S.bedId);
+  const o=(idx!==undefined&&idx!==null)?bed?.outputDetails?.[idx]??null:null;
+  editOutId=o?o.id:null;
+  document.getElementById('out-form-title').textContent=o?'💧 修改排出明細':'💧 新增排出明細';
+  document.getElementById('out-id-preview').textContent=o?o.id:`${S.bedId}O__（新增時產生）`;
+  document.getElementById('of-time').value=o?.outputTime||'';
+  document.getElementById('of-ur').value=o?.urine||'';
+  document.getElementById('of-st').value=o?.stool||'';
+  document.getElementById('of-cb').value=o?.combined||'';
+  document.getElementById('of-dr').value=o?.drain||'';
+  openOv('ov-out');
+}
+async function saveOut(){
+  const bed=findBed(S.recId,S.bedId);if(!bed)return;
+  const now=new Date().toISOString();
+  const data={outputTime:v('of-time'),urine:v('of-ur'),stool:v('of-st'),combined:v('of-cb'),drain:v('of-dr'),createdAt:now};
+  if(editOutId){
+    const o=bed.outputDetails.find(x=>x.id===editOutId);
+    if(o)Object.assign(o,data);
+    showMsg(`排出明細 ${editOutId} 已更新`,'ok');
+  }else{
+    const sn=nextOutSN(bed);
+    const id=mkOutId(S.bedId,sn);
+    bed.outputDetails.push({id,serial:sn,...data});
+    showMsg(`排出明細 ${id} 已新增`,'ok');
+  }
+  await persist();closeOv('ov-out');renderContent();
+}
+async function delOut(oid){
+  if(!confirm(`確定刪除排出明細 ${oid}？`))return;
+  const bed=findBed(S.recId,S.bedId);
+  if(bed)bed.outputDetails=bed.outputDetails.filter(o=>o.id!==oid);
+  await persist();renderContent();showMsg(`排出明細 ${oid} 已刪除`,'ok');
+}
+
+/* ═══════════════════════════════════════
+   CRUD：第三階-C（體重腹圍明細）
+═══════════════════════════════════════ */
+let editMetId=null;
+function openMetForm(idx){
+  const bed=findBed(S.recId,S.bedId);
+  const m=(idx!==undefined&&idx!==null)?bed?.metricDetails?.[idx]??null:null;
+  editMetId=m?m.id:null;
+  document.getElementById('met-form-title').textContent=m?'⚖️ 修改體重腹圍明細':'⚖️ 新增體重腹圍明細';
+  document.getElementById('met-id-preview').textContent=m?m.id:`${S.bedId}M__（新增時產生）`;
+  document.getElementById('mf-time').value=m?.metricTime||'';
+  document.getElementById('mf-wt').value=m?.weight||'';
+  document.getElementById('mf-pw').value=m?.prevWeight||'';
+  document.getElementById('mf-td').value=m?.turnDir||'';
+  document.getElementById('mf-tt').value=m?.turnTime||'';
+  document.getElementById('mf-ab').value=m?.abdomen||'';
+  document.getElementById('mf-ub').value=m?.urineBag||'';
+  openOv('ov-met');
+}
+async function saveMet(){
+  const bed=findBed(S.recId,S.bedId);if(!bed)return;
+  const now=new Date().toISOString();
+  const data={metricTime:v('mf-time'),weight:v('mf-wt'),prevWeight:v('mf-pw'),
+    turnDir:v('mf-td'),turnTime:v('mf-tt'),abdomen:v('mf-ab'),urineBag:v('mf-ub'),createdAt:now};
+  if(editMetId){
+    const m=bed.metricDetails.find(x=>x.id===editMetId);
+    if(m)Object.assign(m,data);
+    showMsg(`體重腹圍明細 ${editMetId} 已更新`,'ok');
+  }else{
+    const sn=nextMetSN(bed);
+    const id=mkMetId(S.bedId,sn);
+    bed.metricDetails.push({id,serial:sn,...data});
+    showMsg(`體重腹圍明細 ${id} 已新增`,'ok');
+  }
+  await persist();closeOv('ov-met');renderContent();
+}
+async function delMet(mid){
+  if(!confirm(`確定刪除體重腹圍明細 ${mid}？`))return;
+  const bed=findBed(S.recId,S.bedId);
+  if(bed)bed.metricDetails=bed.metricDetails.filter(m=>m.id!==mid);
+  await persist();renderContent();showMsg(`體重腹圍明細 ${mid} 已刪除`,'ok');
+}
+
+/* ═══════════════════════════════════════
+   查詢
+═══════════════════════════════════════ */
+function doSearch(){
+  const from=document.getElementById('q-from').value;
+  const to=document.getElementById('q-to').value;
+  const sh=document.getElementById('q-sh').value;
+  const gr=document.getElementById('q-gr').value;
+  const bed=document.getElementById('q-bed').value;
+  const sid=document.getElementById('q-id').value.trim().toUpperCase();
+
+  const hits=DB.filter(r=>{
+    if(from&&r.date<from)return false;
+    if(to&&r.date>to)return false;
+    if(sh&&r.shift!==sh)return false;
+    if(gr&&r.group!==gr)return false;
+    if(sid&&!r.id.toUpperCase().includes(sid))return false;
+    if(bed&&!r.beds?.some(b=>b.bedNo===bed))return false;
+    return true;
+  });
+
+  const res=document.getElementById('q-result');
+  if(!hits.length){res.innerHTML='<div class="msg msg-info">查無符合條件的記錄</div>';return;}
+  let h=`<div class="msg msg-ok" style="margin-bottom:12px">共找到 ${hits.length} 筆主檔記錄</div>`;
+  hits.forEach(r=>{
+    const bedCnt=r.beds?.length||0;
+    const beds=r.beds?.map(b=>b.bedNo).join('、')||'—';
+    h+=`<div class="rec-row">
+      <div class="drill" onclick="S.date='${r.date}';goLevel(2,{recId:'${r.id}'})">
+        <div class="id-badge">${r.id}</div>
+        <div class="row-title">${disp(r.date)} ${SNMS[r.shift]||''} ${GNMS[r.group]||''} ／ ${r.nurseName}</div>
+        <div class="row-sub">床號(${bedCnt})：${beds}</div>
+      </div>
+      <div class="acts">
+        <button type="button" class="btn btn-c1 btn-xs" onclick="S.date='${r.date}';goLevel(2,{recId:'${r.id}'})">進入 →</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delRec('${r.id}')">🗑</button>
+      </div>
+    </div>`;
+  });
+  res.innerHTML=h;
+}
+function clearSearch(){
+  ['q-sh','q-gr','q-bed'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('q-id').value='';
+  document.getElementById('q-result').innerHTML='';
+}
+function fillQBeds(){
+  const sel=document.getElementById('q-bed');
+  BEDS.forEach(b=>{const o=document.createElement('option');o.value=o.text=b;sel.appendChild(o);});
+}
+function fillBedSelect(){
+  const sel=document.getElementById('bf-bed');
+  BEDS.forEach(b=>{const o=document.createElement('option');o.value=o.text=b;sel.appendChild(o);});
+}
+
+/* ═══════════════════════════════════════
+   XML 顯示
+═══════════════════════════════════════ */
+function showXML(){
+  const raw=toXML(DB);
+  const col=raw
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(&lt;\?[^&]*?&gt;)/g,'<span class="xc">$1</span>')
+    .replace(/(&lt;\/?[a-zA-Z]+[^&]*?&gt;)/g,'<span class="xt">$1</span>');
+  document.getElementById('xml-view').innerHTML=col;
+  let beds=0,feeds=0,outs=0,mets=0;
+  DB.forEach(r=>{beds+=(r.beds||[]).length;
+    (r.beds||[]).forEach(b=>{feeds+=(b.feedDetails||[]).length;
+      outs+=(b.outputDetails||[]).length;mets+=(b.metricDetails||[]).length;});});
+  document.getElementById('xc1').textContent=DB.length;
+  document.getElementById('xc2').textContent=beds;
+  document.getElementById('xc3').textContent=feeds;
+  document.getElementById('xc4').textContent=outs;
+  document.getElementById('xc5').textContent=mets;
+}
+function exportXML(){
+  const b=new Blob([toXML(DB)],{type:'application/xml'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);
+  a.download=`a13_${td2s(new Date()).replace(/-/g,'')}.xml`;a.click();
+}
+async function clearAll(){
+  if(!confirm('確定清除所有資料？無法復原！'))return;
+  DB=[];await persist();drawCal();
+  goLevel(0);showXML();showMsg('所有資料已清除','ok');
+}
+
+/* ═══════════════════════════════════════
+   架構說明樹狀圖
+═══════════════════════════════════════ */
+function setTree(){
+  document.getElementById('tree-diagram').innerHTML=
+`<span class="t1">【第一階】主檔（紀錄主檔）</span>
+  ID: <span style="color:#fab387">20260425DA01</span>  ← YYYYMMDD + 班(D/E/N) + 組(A/B/C) + 流水號
+  │
+  ├─ <span class="t2">【第二階】床號主檔</span>
+  │    ID: <span style="color:#fab387">20260425DA018202</span>  ← 紀錄編號 + 床號
+  │    │
+  │    ├─ <span class="t3f">【第三階-A】餵食明細</span>
+  │    │    ID: <span style="color:#fab387">20260425DA018202F01</span>  ← 床號ID + F + 兩位流水號
+  │    │    ID: <span style="color:#fab387">20260425DA018202F02</span>  ← （同一床可多筆）
+  │    │
+  │    ├─ <span class="t3o">【第三階-B】排出明細</span>
+  │    │    ID: <span style="color:#fab387">20260425DA018202O01</span>  ← 床號ID + O + 兩位流水號
+  │    │    ID: <span style="color:#fab387">20260425DA018202O02</span>
+  │    │
+  │    └─ <span class="t3m">【第三階-C】體重腹圍明細</span>
+  │         ID: <span style="color:#fab387">20260425DA018202M01</span>  ← 床號ID + M + 兩位流水號
+  │
+  └─ <span class="t2">【第二階】下一個床號</span>
+       ID: <span style="color:#fab387">20260425DA018101</span>
+       └─ … (同上三階明細)`;
+}
+
+/* ═══════════════════════════════════════
+   Modal 控制
+═══════════════════════════════════════ */
+function openOv(id){
+  const ov = document.getElementById(id);
+  ov.classList.add('on');
+  // 阻止 modal 內的點擊冒泡到 overlay，防止觸發任何外層事件
+  const modal = ov.querySelector('.modal');
+  if(modal && !modal._stopSet){
+    modal._stopSet = true;
+    modal.addEventListener('click', e => e.stopPropagation());
+    modal.addEventListener('touchend', e => e.stopPropagation());
+  }
+  // 防止 Modal 內按 Enter 觸發按鈕
+  ov.querySelectorAll('input,select').forEach(el=>{
+    el.addEventListener('keydown', function(e){
+      if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); }
+    });
+  });
+}
+function closeOv(id){document.getElementById(id).classList.remove('on');}
+// 不設點擊背景關閉 Modal，防止編輯中誤觸導致資料消失
+// 使用者必須點 ✕ 或「取消」按鈕才能關閉
+
+/* ═══════════════════════════════════════
+   Tab 切換
+═══════════════════════════════════════ */
+function goTab(t){
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.nav-tab').forEach(tb=>tb.classList.remove('on'));
+  document.getElementById('pane-'+t)?.classList.add('on');
+  document.querySelector(`[data-t="${t}"]`)?.classList.add('on');
+  if(t==='rec'){renderBC();renderContent();}
+  if(t==='xml')showXML();
+  if(t==='setup'){loadSetupUI();}
+  if(t==='cg'){renderCgList();}
+  if(t==='ward'){renderWardList();}
+}
+document.querySelectorAll('.nav-tab').forEach(tb=>
+  tb.addEventListener('click',()=>goTab(tb.dataset.t)));
+
+/* ═══════════════════════════════════════
+   訊息
+═══════════════════════════════════════ */
+function showMsg(text,type){
+  const a=document.getElementById('msg-area');
+  const cls=type==='ok'?'msg-ok':type==='err'?'msg-err':'msg-info';
+  a.innerHTML=`<div class="msg ${cls}"><span>${type==='ok'?'✅':type==='err'?'❌':'ℹ️'}</span>${text}</div>`;
+  setTimeout(()=>a.innerHTML='',3500);
+}
+
+/* ═══════════════════════════════════════
+   工具函式
+═══════════════════════════════════════ */
+function num(v){const n=parseFloat(v);return isNaN(n)?0:n;}
+function v(id){return document.getElementById(id)?.value||'';}
+
+/* ═══════════════════════════════════════
+   初始化
+═══════════════════════════════════════ */
+/* ═══════════════════════════════════════
+   桌機 / 手機 切換
+═══════════════════════════════════════ */
+let isMobile = false;
+function toggleDev(){
+  isMobile = !isMobile;
+  document.documentElement.classList.toggle('m', isMobile);
+  document.getElementById('dev-icon').textContent = isMobile ? '📱' : '💻';
+  document.getElementById('dev-lbl').textContent  = isMobile ? '手機' : '桌機';
+}
+
+/* ═══════════════════════════════════════
+   數字九宮格
+═══════════════════════════════════════ */
+let npTarget = null;
+
+let npLocked = false;
+
+/* ── focusin：數字欄 → 數字九宮格 ／ 時間欄 → 時間九宮格 ── */
+document.addEventListener('focusin', function(e){
+  if(npLocked) return;
+  const el = e.target;
+  if(!el.closest('.ov') && !el.closest('.np-box') && !el.closest('.tp-box')) return;
+
+  if(el.type === 'number'){
+    npTarget = el;
+    const lbl = el.closest('.fgroup')?.querySelector('label')?.textContent || '數值輸入';
+    document.getElementById('np-field').textContent = lbl;
+    document.getElementById('np-disp').textContent  = el.value || '0';
+    document.getElementById('np-wrap').classList.add('on');
+  } else if(el.classList.contains('time-inp')){
+    const lbl = el.closest('.fgroup')?.querySelector('label')?.textContent || '時間輸入';
+    tpOpen(el, lbl);
+  }
+});
+
+// 點九宮格按鍵時不讓 input 失去焦點
+document.getElementById('np-wrap').addEventListener('mousedown', function(e){
+  if(e.target !== this) e.preventDefault();
+});
+
+// 點 overlay 背景關閉
+document.getElementById('np-wrap').addEventListener('click', function(e){
+  if(e.target === this) npDone();
+});
+
+function npKey(k){
+  if(!npTarget) return;
+  let cur = npTarget.value;
+  if(k === '.' && cur.includes('.')) return;  // 只允許一個小數點
+  if(cur === '0' && k !== '.') cur = k;
+  else cur = cur + k;
+  npTarget.value = cur;
+  document.getElementById('np-disp').textContent = cur || '0';
+  npTarget.dispatchEvent(new Event('input',{bubbles:true}));
+}
+
+function npBack(){
+  if(!npTarget) return;
+  npTarget.value = npTarget.value.slice(0,-1);
+  document.getElementById('np-disp').textContent = npTarget.value || '0';
+  npTarget.dispatchEvent(new Event('input',{bubbles:true}));
+}
+
+function npDone(){
+  npLocked = true;
+  const wrap = document.getElementById('np-wrap');
+  wrap.style.pointerEvents = 'none';
+  wrap.classList.remove('on');
+
+  // ★ 關鍵修復：同時封鎖目前開著的 Modal 內容的點擊
+  //   ghost click 會穿透 np-wrap 打到 Modal 的 ✕ 或取消按鈕
+  document.querySelectorAll('.ov.on .modal').forEach(m=>{
+    m.style.pointerEvents = 'none';
+  });
+
+  setTimeout(()=>{
+    wrap.style.pointerEvents = '';
+    // 恢復 Modal 點擊
+    document.querySelectorAll('.ov .modal').forEach(m=>{
+      m.style.pointerEvents = '';
+    });
+    npTarget = null;
+    npLocked = false;
+  }, 500); // 延長至 500ms 確保 ghost click 過去
+}
+
+/* ═══════════════════════════════════════
+   時間九宮格（24小時制）
+   階段 h：輸入小時 HH（00-23）
+   階段 m：輸入分鐘 MM（00-59）
+═══════════════════════════════════════ */
+let tpTarget = null;   // 目前綁定的 time-inp 欄位
+let tpBuf    = '';     // 輸入緩衝，最多 4 碼數字
+let tpPhase  = 'h';   // 'h'=輸入小時 / 'm'=輸入分鐘
+
+function tpOpen(el, lbl){
+  tpTarget = el;
+  tpBuf    = (el.value||'').replace(':',''); // 還原成4碼數字
+  tpPhase  = 'h';
+  document.getElementById('tp-field').textContent = lbl;
+  // 若已有值就載入
+  if(tpBuf.length===4){
+    const hh=tpBuf.slice(0,2), mm=tpBuf.slice(2,4);
+    if(parseInt(hh)<=23 && parseInt(mm)<=59){
+      tpPhase='m';
+    } else {
+      tpBuf='';
+    }
+  } else {
+    tpBuf='';
+  }
+  tpRender();
+  document.getElementById('tp-wrap').classList.add('on');
+}
+
+function tpRender(){
+  const hhEl = document.getElementById('tp-hh');
+  const mmEl = document.getElementById('tp-mm');
+  const hint = document.getElementById('tp-hint');
+  const conf = document.getElementById('tp-confirm');
+
+  const hh = tpBuf.slice(0,2).padEnd(2,'_');
+  const mm = tpBuf.slice(2,4).padEnd(2,'_');
+
+  // 小時顯示
+  if(tpBuf.length>=2){
+    hhEl.textContent=tpBuf.slice(0,2);
+    hhEl.className='tp-seg done';
+  } else if(tpBuf.length>0){
+    hhEl.textContent=tpBuf.slice(0,1)+'_';
+    hhEl.className='tp-seg active';
+  } else {
+    hhEl.textContent='--';
+    hhEl.className='tp-seg '+(tpPhase==='h'?'active':'empty');
+  }
+
+  // 分鐘顯示
+  if(tpBuf.length>=4){
+    mmEl.textContent=tpBuf.slice(2,4);
+    mmEl.className='tp-seg done';
+  } else if(tpBuf.length===3){
+    mmEl.textContent=tpBuf.slice(2,3)+'_';
+    mmEl.className='tp-seg active';
+  } else {
+    mmEl.textContent='--';
+    mmEl.className='tp-seg '+(tpPhase==='m'?'active':'empty');
+  }
+
+  // 提示文字
+  if(tpPhase==='h'){
+    hint.textContent='請輸入小時（00 ～ 23）';
+    hint.className='tp-hint ph';
+  } else {
+    hint.textContent='請輸入分鐘（00 ～ 59）';
+    hint.className='tp-hint pm';
+  }
+
+  // 確認按鈕：滿4碼且值合法才啟用
+  const ok = tpBuf.length===4 &&
+             parseInt(tpBuf.slice(0,2))<=23 &&
+             parseInt(tpBuf.slice(2,4))<=59;
+  conf.disabled = !ok;
+}
+
+function tpKey(k){
+  if(tpPhase==='h'){
+    if(tpBuf.length>=2) return; // 小時已滿
+    const next = tpBuf + k;
+    // 即時合法性提示（超過23禁止）
+    if(next.length===2 && parseInt(next)>23){
+      document.getElementById('tp-hint').textContent='小時不可超過 23！';
+      document.getElementById('tp-hint').className='tp-hint err';
+      return;
+    }
+    tpBuf = next;
+    if(tpBuf.length===2) tpPhase='m'; // 小時完成，切換到分鐘
+  } else {
+    if(tpBuf.length>=4) return; // 分鐘已滿
+    const mm = tpBuf.slice(2) + k;
+    if(mm.length===2 && parseInt(mm)>59){
+      document.getElementById('tp-hint').textContent='分鐘不可超過 59！';
+      document.getElementById('tp-hint').className='tp-hint err';
+      return;
+    }
+    tpBuf = tpBuf.slice(0,2) + mm;
+  }
+  tpRender();
+}
+
+function tpBack(){
+  if(tpBuf.length===0) return;
+  tpBuf = tpBuf.slice(0,-1);
+  // 退回到小時階段
+  if(tpBuf.length<2) tpPhase='h';
+  else if(tpBuf.length===2) tpPhase='m';
+  tpRender();
+}
+
+function tpClear(){
+  tpBuf=''; tpPhase='h'; tpRender();
+}
+
+function tpDone(){
+  if(tpTarget && tpBuf.length===4){
+    const val=tpBuf.slice(0,2)+':'+tpBuf.slice(2,4);
+    tpTarget.value=val;
+    tpTarget.style.borderColor='#43a047';
+    tpTarget.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  npLocked=true;
+  const wrap=document.getElementById('tp-wrap');
+  wrap.style.pointerEvents='none';
+  wrap.classList.remove('on');
+  document.querySelectorAll('.ov.on .modal').forEach(m=>m.style.pointerEvents='none');
+  setTimeout(()=>{
+    wrap.style.pointerEvents='';
+    document.querySelectorAll('.ov .modal').forEach(m=>m.style.pointerEvents='');
+    tpTarget=null; tpBuf=''; tpPhase='h';
+    npLocked=false;
+  },500);
+}
+
+// 時間九宮格防 mousedown 失焦
+document.getElementById('tp-wrap').addEventListener('mousedown',function(e){
+  if(e.target!==this) e.preventDefault();
+});
+
+/* ═══════════════════════════════════════
+   24小時制時間自動格式化（手動輸入仍保留）
+═══════════════════════════════════════ */
+function timeFmt(el){
+  // 只保留數字與冒號
+  let v = el.value.replace(/[^0-9:]/g,'');
+  // 自動在第2位後加冒號
+  if(v.length >= 3 && !v.includes(':')){
+    v = v.slice(0,2) + ':' + v.slice(2);
+  }
+  // 最多5字元 HH:MM
+  el.value = v.slice(0,5);
+  // 填完5碼後驗證範圍
+  if(v.length === 5){
+    const [hh,mm] = v.split(':').map(Number);
+    if(hh > 23) el.value = '23:' + String(mm).padStart(2,'0');
+    if(mm > 59) el.value = v.slice(0,3) + '59';
+    el.style.borderColor = '#43a047';  // 綠色 = 有效
+  } else {
+    el.style.borderColor = '';
+  }
+}
+
+/* ═══════════════════════════════════════
+   Google Drive 整合
+   僅使用 client_id（前端安全）
+   Folder: 1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d
+═══════════════════════════════════════ */
+const GD = {
+  CLIENT_ID : '296426745832-ui6j8ksr8ntchk7ad6ibbne40cqld3g9.apps.googleusercontent.com',
+  FOLDER_ID : '1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d',
+  SCOPES    : 'https://www.googleapis.com/auth/drive.file',
+  FILENAME  : 'A13_NursingRecords.xml',
+  token     : null,   // access token
+  fileId    : null,   // Drive 上的檔案 ID
+};
+
+/* ── Google 登入（OAuth2 implicit flow）── */
+function gdLogin(){
+  if(!window.google){showMsg('Google 身份驗證尚未載入，請稍候再試','err');return;}
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id : GD.CLIENT_ID,
+    scope     : GD.SCOPES,
+    callback  : async(resp)=>{
+      if(resp.error){gdStatus('登入失敗：'+resp.error,'#ff8a80');return;}
+      GD.token = resp.access_token;
+      // 取得使用者資訊
+      try{
+        const ui = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+          {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
+        const area = document.getElementById('gd-user-area');
+        area.innerHTML = `<div class="gd-user">
+          ${ui.picture?`<img class="gd-avatar" src="${ui.picture}" alt="">`:''}
+          <span style="font-size:12px;font-weight:700">${ui.name||ui.email}</span>
+        </div>`;
+      }catch{}
+      document.getElementById('gd-login-btn').style.display='none';
+      document.getElementById('gd-logout-btn').style.display='';
+      document.getElementById('gd-save-btn').disabled=false;
+      document.getElementById('gd-load-btn').disabled=false;
+      gdStatus('✅ 已登入，可進行 Drive 同步','#b9f6ca');
+      // 自動查找既有檔案 ID
+      await gdFindFile();
+    }
+  });
+  client.requestAccessToken();
+}
+
+/* ── 登出 ── */
+function gdLogout(){
+  if(GD.token) google.accounts.oauth2.revoke(GD.token, ()=>{});
+  GD.token=null; GD.fileId=null;
+  document.getElementById('gd-login-btn').style.display='';
+  document.getElementById('gd-logout-btn').style.display='none';
+  document.getElementById('gd-save-btn').disabled=true;
+  document.getElementById('gd-load-btn').disabled=true;
+  document.getElementById('gd-user-area').innerHTML='';
+  gdStatus('已登出 Google 帳號','');
+}
+
+/* ── 狀態文字 ── */
+function gdStatus(msg, color){
+  const el=document.getElementById('gd-status');
+  el.textContent=msg;
+  el.style.color=color||'';
+}
+
+/* ── 尋找資料夾內既有的同名檔案 ── */
+async function gdFindFile(){
+  if(!GD.token) return;
+  try{
+    const q=encodeURIComponent(
+      `'${GD.FOLDER_ID}' in parents and name='${GD.FILENAME}' and trashed=false`);
+    const r=await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`,
+      {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
+    if(r.files&&r.files.length>0){
+      GD.fileId=r.files[0].id;
+      const mod=new Date(r.files[0].modifiedTime).toLocaleString('zh-TW');
+      gdStatus(`✅ 已登入 ｜ Drive 檔案：${GD.FILENAME}（最後修改：${mod}）`,'#b9f6ca');
+    }else{
+      gdStatus('✅ 已登入 ｜ Drive 尚無此檔案，儲存後將自動建立','#b9f6ca');
+    }
+  }catch(e){gdStatus('查找 Drive 檔案失敗：'+e.message,'#ff8a80');}
+}
+
+/* ── 儲存 XML 至 Drive ── */
+async function gdSave(){
+  if(!GD.token){showMsg('請先登入 Google','err');return;}
+  const btn=document.getElementById('gd-save-btn');
+  btn.innerHTML='<span class="sync-spin">🔄</span> 儲存中…';
+  btn.disabled=true;
+  try{
+    const xml=toXML(DB);
+    const blob=new Blob([xml],{type:'application/xml'});
+    let res;
+    if(GD.fileId){
+      // 更新既有檔案
+      res=await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${GD.fileId}?uploadType=media`,
+        {method:'PATCH',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/xml'},body:blob}
+      ).then(r=>r.json());
+    }else{
+      // 建立新檔案（含資料夾與名稱 metadata）
+      const meta=JSON.stringify({name:GD.FILENAME,parents:[GD.FOLDER_ID]});
+      const form=new FormData();
+      form.append('metadata',new Blob([meta],{type:'application/json'}));
+      form.append('file',blob);
+      res=await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+        {method:'POST',headers:{Authorization:'Bearer '+GD.token},body:form}
+      ).then(r=>r.json());
+      GD.fileId=res.id;
+    }
+    const now=new Date().toLocaleString('zh-TW');
+    gdStatus(`☁️ 已儲存至 Drive ｜ ${now}`,'#b9f6ca');
+    showMsg('✅ XML 已成功儲存至 Google Drive！','ok');
+  }catch(e){
+    gdStatus('❌ 儲存失敗：'+e.message,'#ff8a80');
+    showMsg('Google Drive 儲存失敗：'+e.message,'err');
+  }finally{
+    btn.innerHTML='☁️ 存至 Drive';
+    btn.disabled=false;
+  }
+}
+
+/* ── 從 Drive 讀取 XML ── */
+async function gdLoad(){
+  if(!GD.token){showMsg('請先登入 Google','err');return;}
+  if(!GD.fileId){
+    await gdFindFile();
+    if(!GD.fileId){showMsg('Drive 上尚無資料檔案，請先儲存一次','info');return;}
+  }
+  if(!confirm('從 Google Drive 讀取資料會覆蓋目前的本機資料，確定繼續？'))return;
+  const btn=document.getElementById('gd-load-btn');
+  btn.innerHTML='<span class="sync-spin">🔄</span> 讀取中…';
+  btn.disabled=true;
+  try{
+    const xml=await fetch(
+      `https://www.googleapis.com/drive/v3/files/${GD.fileId}?alt=media`,
+      {headers:{Authorization:'Bearer '+GD.token}}
+    ).then(r=>r.text());
+    const parsed=fromXML(xml);
+    if(parsed===null||parsed===undefined){
+      showMsg('Drive 上的 XML 格式有誤，無法載入','err');return;
+    }
+    DB=parsed;
+    await migrateDB(); // 修復舊格式
+    await persist();
+    drawCal();
+    if(S.lv>=1)renderContent();
+    const now=new Date().toLocaleString('zh-TW');
+    gdStatus(`📂 已從 Drive 讀取 ｜ ${now}`,'#b9f6ca');
+    showMsg(`✅ 已從 Drive 載入 ${DB.length} 筆主檔記錄！`,'ok');
+  }catch(e){
+    gdStatus('❌ 讀取失敗：'+e.message,'#ff8a80');
+    showMsg('Google Drive 讀取失敗：'+e.message,'err');
+  }finally{
+    btn.innerHTML='📂 從 Drive 讀取';
+    btn.disabled=false;
+  }
+}
+
+/* ═══════════════════════════════════════
+   設定資料庫（三個獨立 XML）
+═══════════════════════════════════════ */
+let SETUP = {
+  hospitalNameEn:'', hospitalNameZh:'',
+  unitNameEn:'', unitNameZh:'',
+  storageFileName:'A13_NursingRecords.xml',
+  storageLocation:''
+};
+let CAREGIVERS = [];  // [{empNo, name, license}]
+let WARDS = [];       // [{wardNo, description}]
+
+/* ── XML 序列化 ── */
+function setupToXML(){
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<setup>\n` +
+    `  <hospitalNameEn>${xe(SETUP.hospitalNameEn)}</hospitalNameEn>\n` +
+    `  <hospitalNameZh>${xe(SETUP.hospitalNameZh)}</hospitalNameZh>\n` +
+    `  <unitNameEn>${xe(SETUP.unitNameEn)}</unitNameEn>\n` +
+    `  <unitNameZh>${xe(SETUP.unitNameZh)}</unitNameZh>\n` +
+    `  <storageFileName>${xe(SETUP.storageFileName)}</storageFileName>\n` +
+    `  <storageLocation>${xe(SETUP.storageLocation)}</storageLocation>\n` +
+    `</setup>`;
+}
+function cgToXML(){
+  let x=`<?xml version="1.0" encoding="UTF-8"?>\n<caregivers>\n`;
+  CAREGIVERS.forEach(c=>{
+    x+=`  <caregiver empNo="${xe(c.empNo)}">\n`;
+    x+=`    <name>${xe(c.name)}</name>\n`;
+    x+=`    <license>${xe(c.license)}</license>\n`;
+    x+=`  </caregiver>\n`;
+  });
+  return x+`</caregivers>`;
+}
+function wardToXML(){
+  let x=`<?xml version="1.0" encoding="UTF-8"?>\n<wards>\n`;
+  WARDS.forEach(w=>{
+    x+=`  <ward wardNo="${xe(w.wardNo)}">\n`;
+    x+=`    <description>${xe(w.description)}</description>\n`;
+    x+=`  </ward>\n`;
+  });
+  return x+`</wards>`;
+}
+
+/* ── XML 解析 ── */
+function parseSetupXML(str){
+  try{
+    const doc=new DOMParser().parseFromString(str,'text/xml');
+    if(doc.querySelector('parsererror'))return;
+    const s=doc.documentElement;
+    SETUP.hospitalNameEn=ct(s,'hospitalNameEn');
+    SETUP.hospitalNameZh=ct(s,'hospitalNameZh');
+    SETUP.unitNameEn=ct(s,'unitNameEn');
+    SETUP.unitNameZh=ct(s,'unitNameZh');
+    SETUP.storageFileName=ct(s,'storageFileName')||'A13_NursingRecords.xml';
+    SETUP.storageLocation=ct(s,'storageLocation');
+  }catch(e){console.error('parseSetupXML:',e);}
+}
+function parseCgXML(str){
+  try{
+    const doc=new DOMParser().parseFromString(str,'text/xml');
+    if(doc.querySelector('parsererror'))return;
+    CAREGIVERS=cels(doc.documentElement,'caregiver').map(c=>({
+      empNo:c.getAttribute('empNo')||'',
+      name:ct(c,'name'),
+      license:ct(c,'license')
+    }));
+  }catch(e){console.error('parseCgXML:',e);}
+}
+function parseWardXML(str){
+  try{
+    const doc=new DOMParser().parseFromString(str,'text/xml');
+    if(doc.querySelector('parsererror'))return;
+    WARDS=cels(doc.documentElement,'ward').map(w=>({
+      wardNo:w.getAttribute('wardNo')||'',
+      description:ct(w,'description')
+    }));
+  }catch(e){console.error('parseWardXML:',e);}
+}
+
+/* ── 持久化存取 ── */
+async function loadSettings(){
+  try{const r=await window.storage.get('a13_setup');if(r?.value)parseSetupXML(r.value);}catch{}
+  try{const r=await window.storage.get('a13_cg');if(r?.value)parseCgXML(r.value);}catch{}
+  try{const r=await window.storage.get('a13_ward');if(r?.value)parseWardXML(r.value);}catch{}
+  // localStorage 備份讀取
+  try{if(!CAREGIVERS.length){const b=localStorage.getItem('a13_cg_bak');if(b)parseCgXML(b);}}catch{}
+  try{if(!WARDS.length){const b=localStorage.getItem('a13_ward_bak');if(b)parseWardXML(b);}}catch{}
+}
+async function persistSetup(){
+  const x=setupToXML();
+  try{await window.storage.set('a13_setup',x);}catch{}
+  try{localStorage.setItem('a13_setup_bak',x);}catch{}
+}
+async function persistCg(){
+  const x=cgToXML();
+  try{await window.storage.set('a13_cg',x);}catch{}
+  try{localStorage.setItem('a13_cg_bak',x);}catch{}
+}
+async function persistWard(){
+  const x=wardToXML();
+  try{await window.storage.set('a13_ward',x);}catch{}
+  try{localStorage.setItem('a13_ward_bak',x);}catch{}
+}
+
+/* ── 單一匯出 ── */
+function exportSingleXML(type){
+  let content='',fname='';
+  if(type==='setup'){content=setupToXML();fname='Setup.xml';}
+  else if(type==='cg'){content=cgToXML();fname='Caregivers.xml';}
+  else if(type==='ward'){content=wardToXML();fname='Ward.xml';}
+  const b=new Blob([content],{type:'application/xml'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download=fname;a.click();
+}
+
+/* ════════════════════
+   Setup 介面
+════════════════════ */
+function loadSetupUI(){
+  document.getElementById('su-hn-en').value=SETUP.hospitalNameEn;
+  document.getElementById('su-hn-zh').value=SETUP.hospitalNameZh;
+  document.getElementById('su-un-en').value=SETUP.unitNameEn;
+  document.getElementById('su-un-zh').value=SETUP.unitNameZh;
+  document.getElementById('su-fname').value=SETUP.storageFileName;
+  document.getElementById('su-floc').value=SETUP.storageLocation;
+  refreshSetupPreview();
+}
+function refreshSetupPreview(){
+  const xml=setupToXML();
+  document.getElementById('su-xml-preview').textContent=xml;
+}
+async function saveSetup(){
+  SETUP.hospitalNameEn=v('su-hn-en');
+  SETUP.hospitalNameZh=v('su-hn-zh');
+  SETUP.unitNameEn=v('su-un-en');
+  SETUP.unitNameZh=v('su-un-zh');
+  SETUP.storageFileName=v('su-fname')||'A13_NursingRecords.xml';
+  SETUP.storageLocation=v('su-floc');
+  await persistSetup();
+  refreshSetupPreview();
+  // 更新頁首小字
+  updateAppBarInfo();
+  showMsg('系統設定已儲存','ok');
+}
+function updateAppBarInfo(){
+  const sub=document.querySelector('.app-bar small');
+  if(sub&&SETUP.unitNameZh){
+    sub.textContent=`${SETUP.hospitalNameZh||''} ${SETUP.unitNameZh||''} · XML 格式持久化儲存`;
+  }
+}
+
+/* ════════════════════
+   Caregivers 介面
+════════════════════ */
+let editCgId=null;
+
+function renderCgList(){
+  const el=document.getElementById('cg-list');
+  if(!CAREGIVERS.length){
+    el.innerHTML=`<div class="empty"><div class="icon">👩‍⚕️</div><div>尚無照護人員資料</div></div>`;
+    return;
+  }
+  // 表格
+  let h=`<div style="overflow-x:auto"><table class="det det-met" style="width:100%">
+    <thead><tr>
+      <th style="background:var(--met-h)">員編</th>
+      <th style="background:var(--met-h)">姓名</th>
+      <th style="background:var(--met-h)">技術士證照</th>
+      <th style="background:var(--met-h)">操作</th>
+    </tr></thead><tbody>`;
+  CAREGIVERS.forEach((c,i)=>{
+    h+=`<tr>
+      <td style="font-family:monospace;font-weight:700">${c.empNo}</td>
+      <td><b>${c.name}</b></td>
+      <td>${c.license||'—'}</td>
+      <td>
+        <button type="button" class="btn btn-met btn-xs" onclick="openCgForm(${i})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delCg(${i})">🗑</button>
+      </td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  el.innerHTML=h;
+}
+
+function openCgForm(idx){
+  editCgId=(idx!==undefined&&idx!==null)?idx:null;
+  const c=(editCgId!==null)?CAREGIVERS[editCgId]:null;
+  document.getElementById('cg-form-title').textContent=c?'修改照護人員':'新增照護人員';
+  const empEl=document.getElementById('cg-emp');
+  empEl.value=c?.empNo||'';
+  empEl.readOnly=!!c; // 修改時員編不可改
+  empEl.style.background=c?'#f5f5f5':'';
+  document.getElementById('cg-name').value=c?.name||'';
+  document.getElementById('cg-lic').value=c?.license||'';
+  document.getElementById('cg-id-preview').textContent=c?.empNo||'—';
+  openOv('ov-cg');
+}
+async function saveCg(){
+  const empNo=v('cg-emp').trim().toUpperCase();
+  const name=v('cg-name').trim();
+  if(!empNo){showMsg('請填入員編','err');return;}
+  if(!name){showMsg('請填入姓名','err');return;}
+  const license=v('cg-lic');
+  if(editCgId!==null){
+    CAREGIVERS[editCgId]={empNo,name,license};
+    showMsg(`人員 ${empNo} ${name} 已更新`,'ok');
+  }else{
+    if(CAREGIVERS.find(c=>c.empNo===empNo)){showMsg('此員編已存在','err');return;}
+    CAREGIVERS.push({empNo,name,license});
+    showMsg(`人員 ${empNo} ${name} 已新增`,'ok');
+  }
+  await persistCg();
+  closeOv('ov-cg');
+  renderCgList();
+  refreshEmpDropdown(); // 更新主檔表單下拉
+}
+async function delCg(idx){
+  const c=CAREGIVERS[idx];
+  if(!confirm(`確定刪除 ${c.empNo} ${c.name}？`))return;
+  CAREGIVERS.splice(idx,1);
+  await persistCg();
+  renderCgList();
+  refreshEmpDropdown();
+  showMsg(`人員 ${c.name} 已刪除`,'ok');
+}
+
+/* ── 主檔表單員編下拉 ── */
+function refreshEmpDropdown(){
+  const sel=document.getElementById('rf-emp');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">-- 選擇員編 --</option>';
+  if(!CAREGIVERS.length){
+    const o=document.createElement('option');
+    o.disabled=true;
+    o.text='（尚無照護人員資料，請先至「👩‍⚕️照護人員」頁籤新增）';
+    sel.appendChild(o);
+  } else {
+    CAREGIVERS.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c.empNo;
+      o.text=`${c.empNo} — ${c.name}${c.license?' ('+c.license+')':''}`;
+      sel.appendChild(o);
+    });
+  }
+  if(cur) sel.value=cur;
+}
+function fillNurseFromEmp(){
+  const empNo=v('rf-emp');
+  const cg=CAREGIVERS.find(c=>c.empNo===empNo);
+  document.getElementById('rf-nm').value=cg?.name||'';
+  // 若單位欄空白，自動帶入 Setup 的單位中文名稱
+  if(!v('rf-unit')&&SETUP.unitNameZh){
+    document.getElementById('rf-unit').value=SETUP.unitNameZh;
+  }
+}
+
+/* ════════════════════
+   Ward 介面
+════════════════════ */
+let editWardId=null;
+
+function renderWardList(){
+  const el=document.getElementById('ward-list');
+  if(!WARDS.length){
+    el.innerHTML=`<div class="empty"><div class="icon">🛏</div><div>尚無病房資料</div></div>`;
+    return;
+  }
+  let h=`<div style="overflow-x:auto"><table class="det det-out" style="width:100%">
+    <thead><tr>
+      <th style="background:var(--out-h)">病房編號</th>
+      <th style="background:var(--out-h)">病房說明（個資保護）</th>
+      <th style="background:var(--out-h)">操作</th>
+    </tr></thead><tbody>`;
+  WARDS.forEach((w,i)=>{
+    h+=`<tr>
+      <td style="font-family:monospace;font-weight:700">${w.wardNo}</td>
+      <td>${w.description||'—'}</td>
+      <td>
+        <button type="button" class="btn btn-out btn-xs" onclick="openWardForm(${i})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delWard(${i})">🗑</button>
+      </td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>
+  <div style="margin-top:10px;padding:9px;background:#fff9c4;border-radius:6px;font-size:13px;color:#e65100">
+    🔒 個資保護：病房說明欄不應包含病患姓名、身分證字號等個人識別資訊。
+  </div>`;
+  el.innerHTML=h;
+}
+
+function openWardForm(idx){
+  editWardId=(idx!==undefined&&idx!==null)?idx:null;
+  const w=(editWardId!==null)?WARDS[editWardId]:null;
+  document.getElementById('ward-form-title').textContent=w?'修改病房':'新增病房';
+  const noEl=document.getElementById('wd-no');
+  noEl.value=w?.wardNo||'';
+  noEl.readOnly=!!w;
+  noEl.style.background=w?'#f5f5f5':'';
+  document.getElementById('wd-desc').value=w?.description||'';
+  document.getElementById('ward-id-preview').textContent=w?.wardNo||'—';
+  openOv('ov-ward');
+}
+async function saveWard(){
+  const wardNo=v('wd-no').trim();
+  if(!wardNo){showMsg('請填入病房編號','err');return;}
+  const description=v('wd-desc').trim();
+  if(editWardId!==null){
+    WARDS[editWardId]={wardNo,description};
+    showMsg(`病房 ${wardNo} 已更新`,'ok');
+  }else{
+    if(WARDS.find(w=>w.wardNo===wardNo)){showMsg('此病房編號已存在','err');return;}
+    WARDS.push({wardNo,description});
+    showMsg(`病房 ${wardNo} 已新增`,'ok');
+  }
+  await persistWard();
+  closeOv('ov-ward');
+  renderWardList();
+}
+async function delWard(idx){
+  const w=WARDS[idx];
+  if(!confirm(`確定刪除病房 ${w.wardNo}？`))return;
+  WARDS.splice(idx,1);
+  await persistWard();
+  renderWardList();
+  showMsg(`病房 ${w.wardNo} 已刪除`,'ok');
+}
+
+async function init(){
+  const now=new Date();
+  calY=now.getFullYear();calM=now.getMonth();
+  S.date=td2s(now);
+  await load();
+  await migrateDB();
+  await loadSettings(); // 載入三個設定 XML
+  updateAppBarInfo();
+  refreshEmpDropdown();
+  drawCal();
+  fillQBeds();
+  fillBedSelect();
+  setTree();
+  // 查詢預設日期
+  const f1=new Date();f1.setDate(1);
+  document.getElementById('q-from').value=td2s(f1);
+  document.getElementById('q-to').value=td2s(now);
+  // 麵包屑
+  renderBC();
+}
+init();
+</script>
+</body>
+</html>
