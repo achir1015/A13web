@@ -3,6 +3,7 @@ A13web護理紀錄系統 https://achir1015.github.io/A13web/
 <img width="878" height="659" alt="image" src="https://github.com/user-attachments/assets/abf64bb4-31f6-4230-bc45-ff0a2d2bcbc0" />
 <img width="1295" height="710" alt="image" src="https://github.com/user-attachments/assets/67ee6e70-95cf-4838-b380-0396e29ed4a6" />
 <img width="881" height="708" alt="image" src="https://github.com/user-attachments/assets/2c843b90-ad34-4434-8252-e9ee163b259a" />
+<img width="1363" height="613" alt="image" src="https://github.com/user-attachments/assets/a59f8bd6-80c0-41c5-8446-de7ed5007ae4" />
 
 ⚠️ 重要提醒：client_secret 是機密資訊，請勿在公開場合分享，
 建議您事後至 Google Cloud Console 重新產生新的密鑰。
@@ -86,6 +87,16 @@ A13 護理紀錄系統 完整功能總覽
 
 系統運作於
 achir1015.github.io/A13web/ 🚀
+現在 Google Drive 的目錄結構已完整：
+📁 根資料夾（1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d）
+ ├── A13_NursingRecords.xml
+ └── 📁 Taipei City Hospital Zhongxiao Branch-Respiratory Care Ward/
+      ├── Setup.xml
+      ├── Caregivers.xml
+      └── Ward.xml
 
+目前系統完整儲存架構
+儲存方式用途🌐 瀏覽器 window.storage即時快取，自動儲存💾 localStorage 備份防止 storage 失效的第二道保護🗂 本機資料夾與 HTML 同位置，支援 Git 同步☁️ Google Drive 根目錄護理主檔備份☁️ Google Drive 子資料夾機構設定、人員、病房基本資料共用
+多人使用時，只要登入同一個 Google 帳號，就能從 Drive 讀取共用的基本資料！
 
 
