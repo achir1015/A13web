@@ -98,5 +98,16 @@ achir1015.github.io/A13web/ 🚀
 目前系統完整儲存架構
 儲存方式用途🌐 瀏覽器 window.storage即時快取，自動儲存💾 localStorage 備份防止 storage 失效的第二道保護🗂 本機資料夾與 HTML 同位置，支援 Git 同步☁️ Google Drive 根目錄護理主檔備份☁️ Google Drive 子資料夾機構設定、人員、病房基本資料共用
 多人使用時，只要登入同一個 Google 帳號，就能從 Drive 讀取共用的基本資料！
+各裝置使用方式
+裝置本機儲存雲端備份💻 桌機 Chrome/Edge📂 選擇資料夾（4個XML同步）☁️ Google Drive📱 Android⬇ 個別下載 / 📥 上傳匯入☁️ Google Drive📱 iPhone⬇ 開新頁儲存至檔案App☁️ Google Drive
 
+最佳工作流程建議
+多人共用基本資料：
+任一裝置設定 Setup / Caregivers / Ward
+→ 存至 Google Drive
+→ 其他裝置登入後「從 Drive 讀取」即可共用
+日常護理紀錄：
+開啟系統 → Google 登入 → 從 Drive 讀取
+→ 輸入護理紀錄
+→ 班次結束後存至 Drive
 
