@@ -426,12 +426,31 @@ html.m .id-badge{font-size:14px}
     <button type="button" class="btn-gdrive" id="gd-logout-btn" onclick="gdLogout()" style="display:none">登出</button>
   </div>
   <!-- 第三列：本機資料夾（File System Access API）-->
+  <!-- 第三列：本機檔案操作（桌機:資料夾同步 / 手機:個別檔案）-->
   <div class="gd-row2" id="fs-row">
-    <div class="gd-title">🗂 本機資料夾同步</div>
-    <div class="gd-status" id="fs-status">尚未選擇本機資料夾</div>
-    <button type="button" class="btn-gdrive" id="fs-pick-btn" onclick="fsPick()">📂 選擇資料夾</button>
-    <button type="button" class="btn-gdrive" id="fs-save-btn" onclick="fsSaveAll()" disabled>💾 存至資料夾</button>
-    <button type="button" class="btn-gdrive" id="fs-load-btn" onclick="fsLoadAll()" disabled>📥 從資料夾讀取</button>
+    <div class="gd-title" id="fs-row-title">🗂 本機資料夾同步</div>
+    <div class="gd-status" id="fs-status">偵測中…</div>
+
+    <!-- 桌機模式：資料夾選取 -->
+    <div id="fs-desktop-area" style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+      <button type="button" class="btn-gdrive" id="fs-pick-btn" onclick="fsPick()">📂 選擇資料夾</button>
+      <button type="button" class="btn-gdrive" id="fs-save-btn" onclick="fsSaveAll()" disabled>💾 存至資料夾</button>
+      <button type="button" class="btn-gdrive" id="fs-load-btn" onclick="fsLoadAll()" disabled>📥 從資料夾讀取</button>
+    </div>
+
+    <!-- 手機模式：個別 XML 下載 / 上傳 -->
+    <div id="fs-mobile-area" style="display:none;flex-wrap:wrap;gap:6px;align-items:center">
+      <!-- 下載（匯出）-->
+      <button type="button" class="btn-gdrive" onclick="mobileExport('main')">⬇ 護理XML</button>
+      <button type="button" class="btn-gdrive" onclick="mobileExport('setup')">⬇ Setup</button>
+      <button type="button" class="btn-gdrive" onclick="mobileExport('cg')">⬇ 照護人員</button>
+      <button type="button" class="btn-gdrive" onclick="mobileExport('ward')">⬇ 病房</button>
+      <!-- 上傳（匯入）：隱藏 input -->
+      <button type="button" class="btn-gdrive" onclick="document.getElementById('fs-file-input').click()">📥 匯入XML</button>
+      <input type="file" id="fs-file-input" accept=".xml" multiple
+        style="display:none" onchange="mobileImport(this)">
+    </div>
+
     <div id="fs-support-note" style="font-size:11px;opacity:.7"></div>
   </div>
 </div>
@@ -1863,11 +1882,7 @@ function showXML(){
   document.getElementById('xc4').textContent=outs;
   document.getElementById('xc5').textContent=mets;
 }
-function exportXML(){
-  const b=new Blob([toXML(DB)],{type:'application/xml'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(b);
-  a.download=`a13_${td2s(new Date()).replace(/-/g,'')}.xml`;a.click();
-}
+function exportXML(){ mobileExport('main'); }
 async function clearAll(){
   if(!confirm('確定清除所有資料？無法復原！'))return;
   DB=[];await persist();drawCal();
@@ -2650,15 +2665,7 @@ async function persistWard(){
 }
 
 /* ── 單一匯出 ── */
-function exportSingleXML(type){
-  let content='',fname='';
-  if(type==='setup'){content=setupToXML();fname='Setup.xml';}
-  else if(type==='cg'){content=cgToXML();fname='Caregivers.xml';}
-  else if(type==='ward'){content=wardToXML();fname='Ward.xml';}
-  const b=new Blob([content],{type:'application/xml'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(b);a.download=fname;a.click();
-}
+function exportSingleXML(type){ mobileExport(type); }
 
 /* ════════════════════
    Setup 介面
@@ -2905,18 +2912,129 @@ function fsSupported(){
   return ('showDirectoryPicker' in window);
 }
 
+/* 偵測是否為行動裝置 */
+function isMobileDevice(){
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    || ('ontouchstart' in window && !fsSupported());
+}
+
 function fsInit(){
-  const note=document.getElementById('fs-support-note');
-  if(!fsSupported()){
-    document.getElementById('fs-pick-btn').disabled=true;
-    if(note) note.textContent='（本瀏覽器不支援，請使用 Chrome / Edge）';
-    return;
+  const note    = document.getElementById('fs-support-note');
+  const status  = document.getElementById('fs-status');
+  const desktop = document.getElementById('fs-desktop-area');
+  const mobile  = document.getElementById('fs-mobile-area');
+  const title   = document.getElementById('fs-row-title');
+
+  if(isMobileDevice() || !fsSupported()){
+    // ── 手機模式 ──
+    desktop.style.display = 'none';
+    mobile.style.display  = 'flex';
+    title.textContent     = '📱 本機 XML 下載 / 上傳';
+    status.textContent    = '手機模式：可個別下載或上傳 XML 檔案';
+    if(note) note.textContent = '（下載後存於手機下載資料夾）';
+  } else {
+    // ── 桌機模式 ──
+    desktop.style.display = 'flex';
+    mobile.style.display  = 'none';
+    title.textContent     = '🗂 本機資料夾同步';
+    const savedName = localStorage.getItem('fs_dir_name');
+    status.textContent = savedName
+      ? `上次資料夾：${savedName}（請重新選擇以恢復連接）`
+      : '尚未選擇本機資料夾';
+    if(note) note.textContent = '';
   }
-  if(note) note.textContent='';
-  // 嘗試從 localStorage 還原上次資料夾名稱（句柄無法持久化，只顯示名稱）
-  const savedName=localStorage.getItem('fs_dir_name');
-  if(savedName) document.getElementById('fs-status').textContent=
-    `上次資料夾：${savedName}（請重新選擇以恢復連接）`;
+}
+
+/* ════════════════════
+   手機模式：匯出（下載）
+════════════════════ */
+function mobileExport(type){
+  let content='', fname='';
+  if(type==='main')  { content=toXML(DB);      fname=GD.MAIN_FILE||'A13_NursingRecords.xml'; }
+  if(type==='setup') { content=setupToXML();   fname='Setup.xml'; }
+  if(type==='cg')    { content=cgToXML();      fname='Caregivers.xml'; }
+  if(type==='ward')  { content=wardToXML();    fname='Ward.xml'; }
+
+  const blob=new Blob([content],{type:'application/xml'});
+  const url=URL.createObjectURL(blob);
+
+  // iOS Safari 需要用 window.open
+  if(/iPhone|iPad|iPod/i.test(navigator.userAgent)){
+    const w=window.open('','_blank');
+    if(w){
+      w.document.write(`<pre>${content.replace(/</g,'&lt;')}</pre>`);
+      w.document.title=fname;
+      w.document.close();
+      showMsg(`📄 ${fname} 已開啟於新頁，請長按儲存或複製`, 'info');
+    } else {
+      // fallback：直接 a.click
+      const a=document.createElement('a');
+      a.href=url; a.download=fname; a.click();
+    }
+  } else {
+    // Android / 桌機
+    const a=document.createElement('a');
+    a.href=url; a.download=fname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showMsg(`⬇ ${fname} 已下載至裝置`, 'ok');
+  }
+  setTimeout(()=>URL.revokeObjectURL(url), 3000);
+}
+
+/* ════════════════════
+   手機模式：匯入（上傳）
+   支援同時選多個 XML 檔案
+════════════════════ */
+async function mobileImport(input){
+  const files=Array.from(input.files);
+  if(!files.length) return;
+  let loaded=[], warn=[];
+
+  for(const file of files){
+    const text=await file.text();
+    const name=file.name.toLowerCase();
+
+    if(name==='a13_nursingrecords.xml' || name.includes('nursing')){
+      const p=fromXML(text);
+      if(p!==null){ DB=p; await migrateDB(); await persist();
+        loaded.push(`${file.name}（${DB.length} 筆主檔）`);
+      } else warn.push(file.name+'解析失敗');
+    } else if(name==='setup.xml'){
+      parseSetupXML(text); await persistSetup(); loaded.push('Setup.xml');
+    } else if(name==='caregivers.xml'){
+      parseCgXML(text); await persistCg();
+      loaded.push(`Caregivers.xml（${CAREGIVERS.length} 人）`);
+    } else if(name==='ward.xml'){
+      parseWardXML(text); await persistWard();
+      loaded.push(`Ward.xml（${WARDS.length} 房）`);
+    } else {
+      warn.push(`${file.name}：不認識的檔名`);
+    }
+  }
+
+  // 更新介面
+  updateAppBarInfo();
+  refreshEmpDropdown();
+  drawCal();
+  const curTab=document.querySelector('.nav-tab.on')?.dataset.t;
+  if(curTab==='rec')   { renderBC(); renderContent(); }
+  if(curTab==='xml')   showXML();
+  if(curTab==='cg')    renderCgList();
+  if(curTab==='ward')  renderWardList();
+  if(curTab==='setup') loadSetupUI();
+
+  document.getElementById('fs-status').textContent=
+    `📥 已匯入 ${loaded.length} 個檔案`;
+
+  showMsg(warn.length
+    ? `⚠️ 匯入：${loaded.join('、')}；問題：${warn.join('、')}`
+    : `✅ 已匯入：${loaded.join('、')}`
+  , warn.length?'info':'ok');
+
+  // 清空 input 讓下次可再選同一檔案
+  input.value='';
 }
 
 /* 選擇資料夾 */
