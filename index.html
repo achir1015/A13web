@@ -285,10 +285,21 @@ html.m .id-badge{font-size:14px}
 
 /* ══════════ Google Drive ══════════ */
 .gdrive-bar{background:linear-gradient(135deg,#1a73e8,#0d47a1);
-  color:#fff;padding:8px 20px;display:flex;align-items:center;
-  gap:10px;flex-wrap:wrap;font-size:13px}
-.gdrive-bar .gd-title{font-weight:800;display:flex;align-items:center;gap:6px}
+  color:#fff;padding:6px 20px;display:flex;flex-direction:column;
+  gap:4px;font-size:13px}
+/* 第一列：永遠顯示的儲存位置 */
+.gdrive-bar .gd-row1{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* 第二列：登入狀態與按鈕 */
+.gdrive-bar .gd-row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gdrive-bar .gd-title{font-weight:800;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .gdrive-bar .gd-status{font-size:12px;opacity:.85;flex:1}
+/* 儲存位置標籤 */
+.gd-loc-box{display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.18);padding:4px 14px;border-radius:20px;
+  font-size:13px;font-weight:700;border:1.5px solid rgba(255,255,255,.4);
+  flex:1;min-width:0}
+.gd-loc-box .lbl{opacity:.8;white-space:nowrap;font-weight:400;font-size:12px}
+.gd-loc-box .val{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .btn-gdrive{background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.5);
   color:#fff;padding:5px 13px;border-radius:20px;cursor:pointer;
   font-size:13px;font-weight:700;transition:.2s;display:inline-flex;align-items:center;gap:5px}
@@ -394,18 +405,20 @@ html.m .id-badge{font-size:14px}
 
 <!-- ══════ Google Drive 工具列 ══════ -->
 <div class="gdrive-bar" id="gd-bar">
-  <div class="gd-title">☁️ Google Drive 同步</div>
-  <div class="gd-status" id="gd-status">尚未登入 Google 帳號</div>
-  <!-- 儲存位置顯示（唯讀，來自 Setup.xml）-->
-  <div id="gd-location-area" style="display:flex;align-items:center;gap:6px;
-    background:rgba(255,255,255,.12);padding:4px 12px;border-radius:20px;
-    font-size:12px;flex-shrink:0;max-width:340px;overflow:hidden">
-    <span style="opacity:.75;white-space:nowrap">📁 儲存位置：</span>
-    <span id="gd-location-txt" style="font-weight:700;white-space:nowrap;
-      overflow:hidden;text-overflow:ellipsis;max-width:220px"
-      title="" >—</span>
+  <!-- 第一列：資料儲存位置（永遠顯示，唯讀）-->
+  <div class="gd-row1">
+    <div class="gd-title">💾 資料儲存位置</div>
+    <div class="gd-loc-box" id="gd-location-area">
+      <span class="lbl">📁 檔案：</span>
+      <span id="gd-loc-fname" title="">A13_NursingRecords.xml</span>
+      <span class="lbl" style="margin-left:8px">📂 位置：</span>
+      <span id="gd-loc-path" title="">Google Drive</span>
+    </div>
   </div>
-  <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+  <!-- 第二列：Google Drive 登入狀態與操作 -->
+  <div class="gd-row2">
+    <div class="gd-title">☁️ Google Drive 同步</div>
+    <div class="gd-status" id="gd-status">尚未登入 Google 帳號</div>
     <div id="gd-user-area"></div>
     <button type="button" class="btn-gdrive" id="gd-login-btn" onclick="gdLogin()">🔐 Google 登入</button>
     <button type="button" class="btn-gdrive" id="gd-save-btn" onclick="gdSave()" disabled>☁️ 存至 Drive</button>
@@ -2501,16 +2514,17 @@ function updateAppBarInfo(){
   refreshLocationBar();
 }
 
-/* 更新藍色工具列的儲存位置顯示 */
+/* 更新藍色工具列的儲存位置顯示（永遠可見）*/
 function refreshLocationBar(){
-  const el=document.getElementById('gd-location-txt');
-  if(!el)return;
-  // 組合顯示：檔名 @ 位置
-  const fname=SETUP.storageFileName||'A13_NursingRecords.xml';
-  const loc=SETUP.storageLocation||'Google Drive';
-  const display=`${fname}  @  ${loc}`;
-  el.textContent=display;
-  el.title=display; // hover 時顯示完整內容
+  const fnEl=document.getElementById('gd-loc-fname');
+  const ptEl=document.getElementById('gd-loc-path');
+  if(!fnEl||!ptEl) return;
+  const fname = SETUP.storageFileName || 'A13_NursingRecords.xml';
+  const loc   = SETUP.storageLocation || 'Google Drive';
+  fnEl.textContent = fname;
+  fnEl.title = fname;
+  ptEl.textContent = loc;
+  ptEl.title = loc;
 }
 
 /* ════════════════════
@@ -2694,9 +2708,11 @@ async function init(){
   const now=new Date();
   calY=now.getFullYear();calM=now.getMonth();
   S.date=td2s(now);
+  // ★ 最先執行：先顯示預設位置，讓使用者一進來就看到
+  refreshLocationBar();
   await load();
   await migrateDB();
-  await loadSettings(); // 載入三個設定 XML
+  await loadSettings(); // 載入三個設定 XML（載入後自動更新位置列）
   updateAppBarInfo();
   refreshEmpDropdown();
   drawCal();
