@@ -2356,10 +2356,17 @@ async function gdLoad(){
       showMsg('Drive 上的 XML 格式有誤，無法載入','err');return;
     }
     DB=parsed;
-    await migrateDB(); // 修復舊格式
+    await migrateDB();
     await persist();
+    // 完整更新所有介面
+    updateAppBarInfo();
+    refreshEmpDropdown();
     drawCal();
-    if(S.lv>=1)renderContent();
+    const curTab2=document.querySelector('.nav-tab.on')?.dataset.t;
+    if(curTab2==='rec')  { renderBC(); renderContent(); }
+    if(curTab2==='xml')  showXML();
+    if(curTab2==='cg')   renderCgList();
+    if(curTab2==='ward') renderWardList();
     const now=new Date().toLocaleString('zh-TW');
     gdStatus(`📂 已從 Drive 讀取 ｜ ${now}`,'#b9f6ca');
     showMsg(`✅ 已從 Drive 載入 ${DB.length} 筆主檔記錄！`,'ok');
@@ -2491,13 +2498,13 @@ function exportSingleXML(type){
    Setup 介面
 ════════════════════ */
 function loadSetupUI(){
-  document.getElementById('su-hn-en').value=SETUP.hospitalNameEn;
-  document.getElementById('su-hn-zh').value=SETUP.hospitalNameZh;
-  document.getElementById('su-un-en').value=SETUP.unitNameEn;
-  document.getElementById('su-un-zh').value=SETUP.unitNameZh;
-  document.getElementById('su-fname').value=SETUP.storageFileName;
-  document.getElementById('su-floc').value=SETUP.storageLocation;
-  refreshSetupPreview();
+  document.getElementById('su-hn-en').value=SETUP.hospitalNameEn||'';
+  document.getElementById('su-hn-zh').value=SETUP.hospitalNameZh||'';
+  document.getElementById('su-un-en').value=SETUP.unitNameEn||'';
+  document.getElementById('su-un-zh').value=SETUP.unitNameZh||'';
+  document.getElementById('su-fname').value=SETUP.storageFileName||'A13_NursingRecords.xml';
+  document.getElementById('su-floc').value=SETUP.storageLocation||'';
+  refreshSetupPreview(); // 預覽顯示當前 SETUP 物件的值
 }
 function refreshSetupPreview(){
   const xml=setupToXML();
@@ -2820,35 +2827,69 @@ async function fsLoadAll(){
   btn.innerHTML='<span class="sync-spin">🔄</span> 讀取中…';
   btn.disabled=true;
   try{
-    let loaded=[];
-    // 主資料
+    let loaded=[], warn=[];
+
+    // ── 主資料 ──
     const mainXml=await fsReadFile(FS.FILES.main);
     if(mainXml){
       const p=fromXML(mainXml);
-      if(p!==null){DB=p;await migrateDB();await persist();loaded.push('A13_NursingRecords.xml');}
-    }
-    // Setup
-    const setupXml=await fsReadFile(FS.FILES.setup);
-    if(setupXml){parseSetupXML(setupXml);await persistSetup();loaded.push('Setup.xml');}
-    // Caregivers
-    const cgXml=await fsReadFile(FS.FILES.cg);
-    if(cgXml){parseCgXML(cgXml);await persistCg();loaded.push('Caregivers.xml');}
-    // Ward
-    const wardXml=await fsReadFile(FS.FILES.ward);
-    if(wardXml){parseWardXML(wardXml);await persistWard();loaded.push('Ward.xml');}
+      if(p!==null){
+        DB=p;
+        await migrateDB();
+        await persist();
+        loaded.push(`A13_NursingRecords.xml（${DB.length} 筆主檔）`);
+      } else { warn.push('A13_NursingRecords.xml 解析失敗'); }
+    } else { warn.push('找不到 A13_NursingRecords.xml'); }
 
-    // 更新介面
-    updateAppBarInfo();
-    refreshEmpDropdown();
-    drawCal();
-    if(S.lv>=1)renderContent();
+    // ── Setup ──
+    const setupXml=await fsReadFile(FS.FILES.setup);
+    if(setupXml){
+      parseSetupXML(setupXml);
+      await persistSetup();
+      loaded.push('Setup.xml');
+    }
+
+    // ── Caregivers ──
+    const cgXml=await fsReadFile(FS.FILES.cg);
+    if(cgXml){
+      parseCgXML(cgXml);
+      await persistCg();
+      loaded.push(`Caregivers.xml（${CAREGIVERS.length} 人）`);
+    }
+
+    // ── Ward ──
+    const wardXml=await fsReadFile(FS.FILES.ward);
+    if(wardXml){
+      parseWardXML(wardXml);
+      await persistWard();
+      loaded.push(`Ward.xml（${WARDS.length} 房）`);
+    }
+
+    // ── 完整更新所有介面 ──
+    updateAppBarInfo();       // 頁首、位置列
+    refreshEmpDropdown();     // 員編下拉
+    drawCal();                // 月曆（橘點）
+
+    // 重新渲染目前所在頁面
+    const curTab=document.querySelector('.nav-tab.on')?.dataset.t;
+    if(curTab==='setup') loadSetupUI();
+    if(curTab==='cg')    renderCgList();
+    if(curTab==='ward')  renderWardList();
+    if(curTab==='rec')   { renderBC(); renderContent(); }
+    if(curTab==='xml')   showXML();
 
     const now=new Date().toLocaleString('zh-TW');
     document.getElementById('fs-status').textContent=
-      `📥 已讀取（${loaded.length} 個）｜ ${now}`;
-    showMsg(`✅ 已讀取：${loaded.join('、')} ｜ 共 ${DB.length} 筆主檔`,'ok');
+      `✅ 已讀取 ${loaded.length} 個檔案 ｜ ${now}`;
+
+    let msg=`✅ 已從「${FS.dirHandle.name}」讀取：\n${loaded.join('\n')}`;
+    if(warn.length) msg+=`\n⚠️ 注意：${warn.join('、')}`;
+    showMsg(warn.length>0?msg:`✅ 已讀取 ${loaded.join('、')}`
+      ,warn.length?'info':'ok');
+
   }catch(e){
     showMsg('讀取失敗：'+e.message,'err');
+    console.error('fsLoadAll error:',e);
   }finally{
     btn.innerHTML='📥 從資料夾讀取';btn.disabled=false;
   }
