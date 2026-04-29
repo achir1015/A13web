@@ -2218,13 +2218,99 @@ function timeFmt(el){
    Folder: 1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d
 ═══════════════════════════════════════ */
 const GD = {
-  CLIENT_ID : '296426745832-ui6j8ksr8ntchk7ad6ibbne40cqld3g9.apps.googleusercontent.com',
-  FOLDER_ID : '1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d',
-  SCOPES    : 'https://www.googleapis.com/auth/drive.file',
-  FILENAME  : 'A13_NursingRecords.xml',
-  token     : null,   // access token
-  fileId    : null,   // Drive 上的檔案 ID
+  CLIENT_ID   : '296426745832-ui6j8ksr8ntchk7ad6ibbne40cqld3g9.apps.googleusercontent.com',
+  ROOT_ID     : '1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d', // 根資料夾
+  SCOPES      : 'https://www.googleapis.com/auth/drive.file',
+  MAIN_FILE   : 'A13_NursingRecords.xml',  // 護理主檔（存根資料夾）
+  SETUP_FILE  : 'Setup.xml',
+  CG_FILE     : 'Caregivers.xml',
+  WARD_FILE   : 'Ward.xml',
+  token       : null,   // access token
+  fileId      : null,   // 主檔 ID（根資料夾）
+  subFolderId : null,   // 機構子資料夾 ID
+  fileIds     : {},     // { setup, cg, ward } 各設定檔 ID
 };
+
+/* ── 驗證機構英文名稱與單位英文名稱不能為空白 ── */
+function gdCheckSetup(){
+  const hn=SETUP.hospitalNameEn.trim();
+  const un=SETUP.unitNameEn.trim();
+  if(!hn && !un){
+    showMsg('⚠️ 存取前請先至「⚙️ 系統設定」填入【機構英文名稱】與【單位英文名稱】！','err');
+    return null;
+  }
+  if(!hn){
+    showMsg('⚠️ 請先至「⚙️ 系統設定」填入【機構英文名稱】，不可空白！','err');
+    return null;
+  }
+  if(!un){
+    showMsg('⚠️ 請先至「⚙️ 系統設定」填入【單位英文名稱】，不可空白！','err');
+    return null;
+  }
+  // 子資料夾名稱：hospitalNameEn + "-" + unitNameEn
+  return `${hn}-${un}`;
+}
+
+/* ── 取得或建立子資料夾 ── */
+async function gdGetOrCreateSubFolder(subName){
+  // 先查找
+  const q=encodeURIComponent(
+    `'${GD.ROOT_ID}' in parents and name='${subName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const r=await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,
+    {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
+  if(r.files && r.files.length>0){
+    return r.files[0].id;
+  }
+  // 不存在則建立
+  const meta={name:subName,mimeType:'application/vnd.google-apps.folder',parents:[GD.ROOT_ID]};
+  const created=await fetch('https://www.googleapis.com/drive/v3/files?fields=id,name',
+    {method:'POST',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/json'},
+     body:JSON.stringify(meta)}).then(r=>r.json());
+  return created.id;
+}
+
+/* ── 在指定資料夾尋找或建立 XML 檔案，回傳 {id, exists} ── */
+async function gdFindOrCreateFile(folderId, filename){
+  const q=encodeURIComponent(
+    `'${folderId}' in parents and name='${filename}' and trashed=false`);
+  const r=await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`,
+    {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
+  if(r.files && r.files.length>0){
+    return {id:r.files[0].id, exists:true, modifiedTime:r.files[0].modifiedTime};
+  }
+  return {id:null, exists:false};
+}
+
+/* ── 上傳單一 XML（更新或新建）── */
+async function gdUploadFile(fileId, folderId, filename, content){
+  const blob=new Blob([content],{type:'application/xml'});
+  if(fileId){
+    // 更新
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+      {method:'PATCH',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/xml'},body:blob}
+    ).then(r=>r.json());
+    return fileId;
+  }else{
+    // 新建
+    const meta=JSON.stringify({name:filename,parents:[folderId]});
+    const form=new FormData();
+    form.append('metadata',new Blob([meta],{type:'application/json'}));
+    form.append('file',blob);
+    const res=await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      {method:'POST',headers:{Authorization:'Bearer '+GD.token},body:form}
+    ).then(r=>r.json());
+    return res.id;
+  }
+}
+
+/* ── 下載單一 XML ── */
+async function gdDownloadFile(fileId){
+  return await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.text());
+}
 
 /* ── Google 登入（OAuth2 implicit flow）── */
 function gdLogin(){
@@ -2276,56 +2362,72 @@ function gdStatus(msg, color){
   el.style.color=color||'';
 }
 
-/* ── 尋找資料夾內既有的同名檔案 ── */
+/* ── 登入後自動查找既有檔案 ── */
 async function gdFindFile(){
   if(!GD.token) return;
+  const subName = gdCheckSetup();
+  if(!subName){
+    gdStatus('⚠️ 請先設定機構英文名稱與單位英文名稱','#ff8a80');
+    return;
+  }
   try{
+    // 查找子資料夾
     const q=encodeURIComponent(
-      `'${GD.FOLDER_ID}' in parents and name='${GD.FILENAME}' and trashed=false`);
+      `'${GD.ROOT_ID}' in parents and name='${subName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
     const r=await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`,
+      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,
       {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
-    if(r.files&&r.files.length>0){
-      GD.fileId=r.files[0].id;
-      const mod=new Date(r.files[0].modifiedTime).toLocaleString('zh-TW');
-      gdStatus(`✅ 已登入 ｜ Drive 檔案：${GD.FILENAME}（最後修改：${mod}）`,'#b9f6ca');
+
+    if(r.files && r.files.length>0){
+      GD.subFolderId = r.files[0].id;
+      // 查找各設定檔
+      const mf=await gdFindOrCreateFile(GD.ROOT_ID,  GD.MAIN_FILE);
+      const sf=await gdFindOrCreateFile(GD.subFolderId, GD.SETUP_FILE);
+      const cf=await gdFindOrCreateFile(GD.subFolderId, GD.CG_FILE);
+      const wf=await gdFindOrCreateFile(GD.subFolderId, GD.WARD_FILE);
+      GD.fileId          = mf.id;
+      GD.fileIds.setup   = sf.id;
+      GD.fileIds.cg      = cf.id;
+      GD.fileIds.ward    = wf.id;
+      gdStatus(`✅ 已登入 ｜ 📁 ${subName}（子資料夾已存在）`,'#b9f6ca');
     }else{
-      gdStatus('✅ 已登入 ｜ Drive 尚無此檔案，儲存後將自動建立','#b9f6ca');
+      GD.subFolderId=null;
+      gdStatus(`✅ 已登入 ｜ 子資料夾「${subName}」尚未建立，儲存時自動建立`,'#b9f6ca');
     }
-  }catch(e){gdStatus('查找 Drive 檔案失敗：'+e.message,'#ff8a80');}
+    // 更新位置列
+    const ptEl=document.getElementById('gd-loc-path');
+    if(ptEl){ ptEl.textContent=`Google Drive / ${subName}`; ptEl.title=`Google Drive / ${subName}`; }
+  }catch(e){gdStatus('查找 Drive 子資料夾失敗：'+e.message,'#ff8a80');}
 }
 
-/* ── 儲存 XML 至 Drive ── */
+/* ── 儲存至 Drive ── */
 async function gdSave(){
   if(!GD.token){showMsg('請先登入 Google','err');return;}
+  // ★ 驗證機構與單位英文名稱
+  const subName=gdCheckSetup();
+  if(!subName) return;
+
   const btn=document.getElementById('gd-save-btn');
   btn.innerHTML='<span class="sync-spin">🔄</span> 儲存中…';
   btn.disabled=true;
   try{
-    const xml=toXML(DB);
-    const blob=new Blob([xml],{type:'application/xml'});
-    let res;
-    if(GD.fileId){
-      // 更新既有檔案
-      res=await fetch(
-        `https://www.googleapis.com/upload/drive/v3/files/${GD.fileId}?uploadType=media`,
-        {method:'PATCH',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/xml'},body:blob}
-      ).then(r=>r.json());
-    }else{
-      // 建立新檔案（含資料夾與名稱 metadata）
-      const meta=JSON.stringify({name:GD.FILENAME,parents:[GD.FOLDER_ID]});
-      const form=new FormData();
-      form.append('metadata',new Blob([meta],{type:'application/json'}));
-      form.append('file',blob);
-      res=await fetch(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
-        {method:'POST',headers:{Authorization:'Bearer '+GD.token},body:form}
-      ).then(r=>r.json());
-      GD.fileId=res.id;
-    }
+    // 1. 取得或建立子資料夾
+    GD.subFolderId = await gdGetOrCreateSubFolder(subName);
+
+    // 2. 儲存主護理檔案至根資料夾
+    GD.fileId = await gdUploadFile(GD.fileId, GD.ROOT_ID, GD.MAIN_FILE, toXML(DB));
+
+    // 3. 儲存三個設定檔至子資料夾
+    GD.fileIds.setup = await gdUploadFile(GD.fileIds.setup, GD.subFolderId, GD.SETUP_FILE, setupToXML());
+    GD.fileIds.cg    = await gdUploadFile(GD.fileIds.cg,    GD.subFolderId, GD.CG_FILE,    cgToXML());
+    GD.fileIds.ward  = await gdUploadFile(GD.fileIds.ward,  GD.subFolderId, GD.WARD_FILE,  wardToXML());
+
     const now=new Date().toLocaleString('zh-TW');
-    gdStatus(`☁️ 已儲存至 Drive ｜ ${now}`,'#b9f6ca');
-    showMsg('✅ XML 已成功儲存至 Google Drive！','ok');
+    gdStatus(`☁️ 已儲存 ｜ 📁 ${subName} ｜ ${now}`,'#b9f6ca');
+    // 更新位置列
+    const ptEl=document.getElementById('gd-loc-path');
+    if(ptEl){ ptEl.textContent=`Google Drive / ${subName}`; ptEl.title=`Google Drive / ${subName}`; }
+    showMsg(`✅ 已儲存至 Google Drive / ${subName}`,'ok');
   }catch(e){
     gdStatus('❌ 儲存失敗：'+e.message,'#ff8a80');
     showMsg('Google Drive 儲存失敗：'+e.message,'err');
@@ -2335,41 +2437,70 @@ async function gdSave(){
   }
 }
 
-/* ── 從 Drive 讀取 XML ── */
+/* ── 從 Drive 讀取 ── */
 async function gdLoad(){
   if(!GD.token){showMsg('請先登入 Google','err');return;}
-  if(!GD.fileId){
-    await gdFindFile();
-    if(!GD.fileId){showMsg('Drive 上尚無資料檔案，請先儲存一次','info');return;}
+  // ★ 驗證機構與單位英文名稱
+  const subName=gdCheckSetup();
+  if(!subName) return;
+
+  // 確保已找到子資料夾與檔案
+  if(!GD.subFolderId) await gdFindFile();
+  if(!GD.subFolderId){
+    showMsg(`Drive 上尚無「${subName}」子資料夾，請先儲存一次建立基本資料`,'info');
+    return;
   }
-  if(!confirm('從 Google Drive 讀取資料會覆蓋目前的本機資料，確定繼續？'))return;
+  if(!confirm(`從 Google Drive / ${subName} 讀取所有設定資料？\n目前設定將被覆蓋。`))return;
+
   const btn=document.getElementById('gd-load-btn');
   btn.innerHTML='<span class="sync-spin">🔄</span> 讀取中…';
   btn.disabled=true;
   try{
-    const xml=await fetch(
-      `https://www.googleapis.com/drive/v3/files/${GD.fileId}?alt=media`,
-      {headers:{Authorization:'Bearer '+GD.token}}
-    ).then(r=>r.text());
-    const parsed=fromXML(xml);
-    if(parsed===null||parsed===undefined){
-      showMsg('Drive 上的 XML 格式有誤，無法載入','err');return;
+    let loaded=[], warn=[];
+
+    // 主護理檔案
+    if(GD.fileId){
+      const xml=await gdDownloadFile(GD.fileId);
+      const p=fromXML(xml);
+      if(p!==null){ DB=p; await migrateDB(); await persist(); loaded.push(`${GD.MAIN_FILE}（${DB.length} 筆）`); }
+      else warn.push(GD.MAIN_FILE+' 解析失敗');
     }
-    DB=parsed;
-    await migrateDB();
-    await persist();
+
+    // Setup.xml
+    const sfInfo=await gdFindOrCreateFile(GD.subFolderId, GD.SETUP_FILE);
+    if(sfInfo.id){ GD.fileIds.setup=sfInfo.id;
+      parseSetupXML(await gdDownloadFile(sfInfo.id)); await persistSetup(); loaded.push(GD.SETUP_FILE); }
+    else warn.push(GD.SETUP_FILE+' 不存在');
+
+    // Caregivers.xml
+    const cfInfo=await gdFindOrCreateFile(GD.subFolderId, GD.CG_FILE);
+    if(cfInfo.id){ GD.fileIds.cg=cfInfo.id;
+      parseCgXML(await gdDownloadFile(cfInfo.id)); await persistCg(); loaded.push(`${GD.CG_FILE}（${CAREGIVERS.length} 人）`); }
+    else warn.push(GD.CG_FILE+' 不存在');
+
+    // Ward.xml
+    const wfInfo=await gdFindOrCreateFile(GD.subFolderId, GD.WARD_FILE);
+    if(wfInfo.id){ GD.fileIds.ward=wfInfo.id;
+      parseWardXML(await gdDownloadFile(wfInfo.id)); await persistWard(); loaded.push(`${GD.WARD_FILE}（${WARDS.length} 房）`); }
+    else warn.push(GD.WARD_FILE+' 不存在');
+
     // 完整更新所有介面
     updateAppBarInfo();
     refreshEmpDropdown();
     drawCal();
-    const curTab2=document.querySelector('.nav-tab.on')?.dataset.t;
-    if(curTab2==='rec')  { renderBC(); renderContent(); }
-    if(curTab2==='xml')  showXML();
-    if(curTab2==='cg')   renderCgList();
-    if(curTab2==='ward') renderWardList();
+    const curTab=document.querySelector('.nav-tab.on')?.dataset.t;
+    if(curTab==='rec')   { renderBC(); renderContent(); }
+    if(curTab==='xml')   showXML();
+    if(curTab==='cg')    renderCgList();
+    if(curTab==='ward')  renderWardList();
+    if(curTab==='setup') loadSetupUI();
+
     const now=new Date().toLocaleString('zh-TW');
-    gdStatus(`📂 已從 Drive 讀取 ｜ ${now}`,'#b9f6ca');
-    showMsg(`✅ 已從 Drive 載入 ${DB.length} 筆主檔記錄！`,'ok');
+    gdStatus(`📂 已讀取 ｜ 📁 ${subName} ｜ ${now}`,'#b9f6ca');
+    showMsg(warn.length
+      ? `⚠️ 部分讀取：${loaded.join('、')}；缺少：${warn.join('、')}`
+      : `✅ 已從 Drive / ${subName} 讀取：${loaded.join('、')}`
+    , warn.length?'info':'ok');
   }catch(e){
     gdStatus('❌ 讀取失敗：'+e.message,'#ff8a80');
     showMsg('Google Drive 讀取失敗：'+e.message,'err');
