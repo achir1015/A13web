@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<setup>
+  <hospitalNameEn>Taipei City Hospital Zhongxiao Branch</hospitalNameEn>
+  <hospitalNameZh>臺北市立聯合醫院忠孝院區</hospitalNameZh>
+  <unitNameEn>Respiratory Care Ward</unitNameEn>
+  <unitNameZh>呼吸照護病房</unitNameZh>
+  <storageFileName>A13_NursingRecords.xml</storageFileName>
+  <storageLocation></storageLocation>
+</setup>

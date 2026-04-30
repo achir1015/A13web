@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wards>
+  <ward wardNo="隔離病房">
+    <description>新病人入住、安寧病人、新冠病人</description>
+  </ward>
+  <ward wardNo="8021">
+    <description>8021</description>
+  </ward>
+  <ward wardNo="8022">
+    <description></description>
+  </ward>
+  <ward wardNo="8061">
+    <description></description>
+  </ward>
+  <ward wardNo="8062">
+    <description></description>
+  </ward>
+  <ward wardNo="8063">
+    <description></description>
+  </ward>
+  <ward wardNo="8081">
+    <description></description>
+  </ward>
+  <ward wardNo="8101">
+    <description></description>
+  </ward>
+  <ward wardNo="8102">
+    <description></description>
+  </ward>
+  <ward wardNo="8103">
+    <description></description>
+  </ward>
+  <ward wardNo="8121">
+    <description></description>
+  </ward>
+  <ward wardNo="8122">
+    <description></description>
+  </ward>
+  <ward wardNo="8123">
+    <description></description>
+  </ward>
+  <ward wardNo="8161">
+    <description></description>
+  </ward>
+  <ward wardNo="8162">
+    <description></description>
+  </ward>
+  <ward wardNo="8163">
+    <description></description>
+  </ward>
+  <ward wardNo="8181">
+    <description></description>
+  </ward>
+  <ward wardNo="8182">
+    <description></description>
+  </ward>
+  <ward wardNo="8183">
+    <description></description>
+  </ward>
+  <ward wardNo="8201">
+    <description></description>
+  </ward>
+  <ward wardNo="8202">
+    <description></description>
+  </ward>
+  <ward wardNo="8203">
+    <description></description>
+  </ward>
+  <ward wardNo="8221">
+    <description></description>
+  </ward>
+  <ward wardNo="8222">
+    <description></description>
+  </ward>
+  <ward wardNo="8223">
+    <description></description>
+  </ward>
+  <ward wardNo="8261">
+    <description></description>
+  </ward>
+  <ward wardNo="8262">
+    <description></description>
+  </ward>
+  <ward wardNo="8263">
+    <description></description>
+  </ward>
+  <ward wardNo="8281">
+    <description></description>
+  </ward>
+  <ward wardNo="8282">
+    <description></description>
+  </ward>
+  <ward wardNo="8283">
+    <description></description>
+  </ward>
+</wards>
