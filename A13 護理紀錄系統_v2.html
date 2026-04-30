@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>A13 護理紀錄系統 v2</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 /* ═══════════════ CSS 變數 ═══════════════ */
 :root{
@@ -180,6 +181,10 @@ table.det td{text-align:center}
 table.det tbody tr:nth-child(even){background:#fafafa}
 table.det tbody tr:hover{background:#f0f4ff}
 .det-key{font-family:monospace;font-size:15px;color:var(--gray);font-weight:700}
+.time-inp{font-family:'Courier New',monospace;font-size:22px;font-weight:700;
+  letter-spacing:3px;text-align:center;color:var(--c0);background:#e0f7fa;
+  border:2px solid var(--c2) !important}
+.time-inp::placeholder{font-size:18px;letter-spacing:2px;color:#90a4ae;font-weight:400}
 .det-total td{font-weight:800;border-top:3px solid #546e7a !important}
 .det-feed-tot td{background:#ffe082 !important;color:#bf360c}
 .det-out-tot td{background:#a5d6a7 !important;color:#1b5e20}
@@ -278,7 +283,32 @@ html.m .btn-xs{padding:5px 10px;font-size:13px}
 html.m .btn-sm{padding:5px 12px;font-size:14px}
 html.m .id-badge{font-size:14px}
 
-/* ══════════ 數字九宮格 ══════════ */
+/* ══════════ Google Drive ══════════ */
+.gdrive-bar{background:linear-gradient(135deg,#1a73e8,#0d47a1);
+  color:#fff;padding:6px 20px;display:flex;flex-direction:column;
+  gap:4px;font-size:13px}
+/* 第一列：永遠顯示的儲存位置 */
+.gdrive-bar .gd-row1{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+/* 第二列：登入狀態與按鈕 */
+.gdrive-bar .gd-row2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gdrive-bar .gd-title{font-weight:800;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.gdrive-bar .gd-status{font-size:12px;opacity:.85;flex:1}
+/* 儲存位置標籤 */
+.gd-loc-box{display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.18);padding:4px 14px;border-radius:20px;
+  font-size:13px;font-weight:700;border:1.5px solid rgba(255,255,255,.4);
+  flex:1;min-width:0}
+.gd-loc-box .lbl{opacity:.8;white-space:nowrap;font-weight:400;font-size:12px}
+.gd-loc-box .val{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn-gdrive{background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.5);
+  color:#fff;padding:5px 13px;border-radius:20px;cursor:pointer;
+  font-size:13px;font-weight:700;transition:.2s;display:inline-flex;align-items:center;gap:5px}
+.btn-gdrive:hover{background:rgba(255,255,255,.35)}
+.btn-gdrive:disabled{opacity:.45;cursor:not-allowed}
+.gd-user{display:flex;align-items:center;gap:7px}
+.gd-avatar{width:26px;height:26px;border-radius:50%;border:2px solid rgba(255,255,255,.5)}
+.sync-spin{display:inline-block;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .np-wrap{display:none;position:fixed;inset:0;z-index:999999;
   align-items:flex-end;justify-content:center;
   background:rgba(0,0,0,.35)}
@@ -306,6 +336,44 @@ html.m .id-badge{font-size:14px}
   color:#fff;border:none;border-radius:12px;font-size:20px;font-weight:800;
   padding:14px;cursor:pointer;transition:.18s;letter-spacing:1px}
 .np-confirm:active{filter:brightness(.9)}
+
+/* ══════════ 時間九宮格 ══════════ */
+.tp-wrap{display:none;position:fixed;inset:0;z-index:999999;
+  align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.4)}
+.tp-wrap.on{display:flex}
+.tp-box{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:360px;
+  padding:14px 14px 20px;box-shadow:0 -6px 32px rgba(0,0,0,.25);
+  animation:npSlide .2s ease-out}
+.tp-fieldname{font-size:13px;color:var(--gray);font-weight:700;
+  text-align:center;margin-bottom:6px}
+.tp-disp{background:#1e1e2e;border-radius:10px;padding:12px 16px;
+  margin-bottom:8px;display:flex;align-items:center;
+  justify-content:center;gap:6px}
+.tp-seg{font-family:monospace;font-size:38px;font-weight:800;
+  width:74px;text-align:center;border-radius:8px;padding:4px 0;transition:.15s}
+.tp-seg.active{background:var(--c1);color:#fff}
+.tp-seg.done{color:#a6e3a1}
+.tp-seg.empty{color:#455a64}
+.tp-colon{font-family:monospace;font-size:38px;font-weight:800;color:#546e7a}
+.tp-hint{font-size:13px;text-align:center;margin-bottom:10px;
+  font-weight:700;padding:4px 10px;border-radius:20px;display:inline-block}
+.tp-hint-wrap{text-align:center;margin-bottom:10px}
+.tp-hint.ph{background:#e3f2fd;color:#1565c0}
+.tp-hint.pm{background:#e8f5e9;color:#2e7d32}
+.tp-hint.err{background:#ffebee;color:#c62828}
+.tp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:9px}
+.tp-key{background:#e3f2fd;border:none;border-radius:10px;font-size:26px;
+  font-weight:800;padding:16px 8px;cursor:pointer;transition:.15s;
+  color:#1565c0;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+.tp-key:active{transform:scale(.93);background:var(--c1);color:#fff}
+.tp-key.tp-back{background:#fff3e0;color:var(--orange);font-size:22px}
+.tp-key.tp-clr{background:#ffebee;color:var(--red);font-size:15px;font-weight:800}
+.tp-confirm{width:100%;background:linear-gradient(135deg,var(--c0),var(--c1));
+  color:#fff;border:none;border-radius:12px;font-size:20px;font-weight:800;
+  padding:14px;cursor:pointer;transition:.18s}
+.tp-confirm:active{filter:brightness(.9)}
+.tp-confirm:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -318,7 +386,7 @@ html.m .id-badge{font-size:14px}
     <small>三階關聯式資料管理 · XML 格式持久化儲存</small>
   </div>
   <div class="ver">v2.0</div>
-  <button class="dev-toggle" id="dev-btn" onclick="toggleDev()" title="切換桌機／手機模式">
+  <button type="button" class="dev-toggle" id="dev-btn" onclick="toggleDev()" title="切換桌機／手機模式">
     <span id="dev-icon">💻</span><span class="lbl" id="dev-lbl">桌機</span>
   </button>
 </header>
@@ -330,7 +398,62 @@ html.m .id-badge{font-size:14px}
   <div class="nav-tab" data-t="qry">🔍 查詢</div>
   <div class="nav-tab" data-t="xml">💾 XML資料</div>
   <div class="nav-tab" data-t="sch">📐 架構說明</div>
+  <div class="nav-tab" data-t="setup">⚙️ 系統設定</div>
+  <div class="nav-tab" data-t="cg">👩‍⚕️ 照護人員</div>
+  <div class="nav-tab" data-t="ward">🛏 病房管理</div>
 </nav>
+
+<!-- ══════ Google Drive 工具列 ══════ -->
+<div class="gdrive-bar" id="gd-bar">
+  <!-- 第一列：資料儲存位置（永遠顯示，唯讀）-->
+  <div class="gd-row1">
+    <div class="gd-title">💾 資料儲存位置</div>
+    <div class="gd-loc-box" id="gd-location-area">
+      <span class="lbl">📁 檔案：</span>
+      <span id="gd-loc-fname" title="">A13_NursingRecords.xml</span>
+      <span class="lbl" style="margin-left:8px">📂 位置：</span>
+      <span id="gd-loc-path" title="">Google Drive</span>
+    </div>
+  </div>
+  <!-- 第二列：Google Drive 登入狀態與操作 -->
+  <div class="gd-row2">
+    <div class="gd-title">☁️ Google Drive 同步</div>
+    <div class="gd-status" id="gd-status">尚未登入 Google 帳號</div>
+    <div id="gd-user-area"></div>
+    <button type="button" class="btn-gdrive" id="gd-login-btn" onclick="gdLogin()">🔐 Google 登入</button>
+    <button type="button" class="btn-gdrive" id="gd-save-btn" onclick="gdSave()" disabled>☁️ 存至 Drive</button>
+    <button type="button" class="btn-gdrive" id="gd-load-btn" onclick="gdLoad()" disabled>📂 從 Drive 讀取</button>
+    <button type="button" class="btn-gdrive" id="gd-logout-btn" onclick="gdLogout()" style="display:none">登出</button>
+  </div>
+  <!-- 第三列：本機資料夾（File System Access API）-->
+  <!-- 第三列：本機檔案操作（桌機:資料夾同步 / 手機:個別檔案）-->
+  <div class="gd-row2" id="fs-row">
+    <div class="gd-title" id="fs-row-title">🗂 本機資料夾同步</div>
+    <div class="gd-status" id="fs-status">偵測中…</div>
+
+    <!-- 桌機模式：資料夾選取 -->
+    <div id="fs-desktop-area" style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+      <button type="button" class="btn-gdrive" id="fs-pick-btn" onclick="fsPick()">📂 選擇資料夾</button>
+      <button type="button" class="btn-gdrive" id="fs-save-btn" onclick="fsSaveAll()" disabled>💾 存至資料夾</button>
+      <button type="button" class="btn-gdrive" id="fs-load-btn" onclick="fsLoadAll()" disabled>📥 從資料夾讀取</button>
+    </div>
+
+    <!-- 手機模式：個別 XML 下載 / 上傳 -->
+    <div id="fs-mobile-area" style="display:none;flex-wrap:wrap;gap:6px;align-items:center">
+      <!-- 下載（匯出）-->
+      <button type="button" class="btn-gdrive" onclick="mobileExport('main')">⬇ 護理XML</button>
+      <button type="button" class="btn-gdrive" onclick="mobileExport('setup')">⬇ Setup</button>
+      <button type="button" class="btn-gdrive" onclick="mobileExport('cg')">⬇ 照護人員</button>
+      <button type="button" class="btn-gdrive" onclick="mobileExport('ward')">⬇ 病房</button>
+      <!-- 上傳（匯入）：隱藏 input -->
+      <button type="button" class="btn-gdrive" onclick="document.getElementById('fs-file-input').click()">📥 匯入XML</button>
+      <input type="file" id="fs-file-input" accept=".xml" multiple
+        style="display:none" onchange="mobileImport(this)">
+    </div>
+
+    <div id="fs-support-note" style="font-size:11px;opacity:.7"></div>
+  </div>
+</div>
 
 <!-- ══════ 麵包屑 ══════ -->
 <div class="bc-bar" id="bc-bar"></div>
@@ -345,9 +468,9 @@ html.m .id-badge{font-size:14px}
   <div class="pane on" id="pane-cal">
     <div class="cal-card">
       <div class="cal-hdr">
-        <button class="cal-btn" onclick="calMove(-1)">‹</button>
+        <button type="button" class="cal-btn" onclick="calMove(-1)">‹</button>
         <h2 id="cal-title"></h2>
-        <button class="cal-btn" onclick="calMove(1)">›</button>
+        <button type="button" class="cal-btn" onclick="calMove(1)">›</button>
       </div>
       <div class="cal-wk">
         <span>日</span><span>一</span><span>二</span><span>三</span>
@@ -386,8 +509,8 @@ html.m .id-badge{font-size:14px}
         <div class="fgroup"><label>紀錄編號（含）</label><input type="text" id="q-id" placeholder="如 20260425DA01"></div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-c1" onclick="doSearch()">🔍 查詢</button>
-        <button class="btn btn-gray" onclick="clearSearch()">清除</button>
+        <button type="button" class="btn btn-c1" onclick="doSearch()">🔍 查詢</button>
+        <button type="button" class="btn btn-gray" onclick="clearSearch()">清除</button>
       </div>
     </div>
     <div id="q-result"></div>
@@ -398,9 +521,9 @@ html.m .id-badge{font-size:14px}
     <div class="sec-bar">
       <h3 style="color:var(--c1)">💾 XML 原始資料</h3>
       <div class="btns">
-        <button class="btn btn-c1" onclick="showXML()">🔄 重新整理</button>
-        <button class="btn" style="background:#ef6c00;color:#fff" onclick="exportXML()">⬇ 匯出</button>
-        <button class="btn btn-red" onclick="clearAll()">🗑 清除全部</button>
+        <button type="button" class="btn btn-c1" onclick="showXML()">🔄 重新整理</button>
+        <button type="button" class="btn" style="background:#ef6c00;color:#fff" onclick="exportXML()">⬇ 匯出</button>
+        <button type="button" class="btn btn-red" onclick="clearAll()">🗑 清除全部</button>
       </div>
     </div>
     <div style="font-size:17px;color:var(--gray);margin-bottom:8px">
@@ -425,7 +548,7 @@ html.m .id-badge{font-size:14px}
             <b>鍵值：</b><span class="tier-key">紀錄編號</span>
             &nbsp;= 年月日(YYYYMMDD) + 班別(D/E/N) + 組別(A/B/C) + 兩位流水號<br>
             例：<span class="tier-key">20260425DA01</span>（2026-04-25 白班 A組 第1筆）<br>
-            <b>欄位：</b>日期、班別、組別、流水號、護士姓名、單位、員編
+            <b>欄位：</b>日期、班別、組別、流水號、護理姓名、單位、員編
           </div>
         </div>
         <div class="tier-box" style="border:2px solid var(--bed-h)">
@@ -467,6 +590,67 @@ html.m .id-badge{font-size:14px}
     </div>
   </div>
 
+  <!-- ══════ 系統設定 Setup.xml ══════ -->
+  <div class="pane" id="pane-setup">
+    <div class="sec-bar">
+      <h3 style="color:var(--c0)">⚙️ 系統設定 (Setup.xml)</h3>
+    </div>
+    <div class="card">
+      <div class="card-hdr" style="background:var(--c0)">🏥 機構與儲存設定</div>
+      <div class="card-body">
+        <div class="fgrid" style="margin-bottom:14px">
+          <div class="fgroup"><label>機構英文名稱</label>
+            <input type="text" id="su-hn-en" placeholder="Taipei City Hospital Zhongxiao Branch"></div>
+          <div class="fgroup"><label>機構中文名稱</label>
+            <input type="text" id="su-hn-zh" placeholder="臺北市立聯合醫院忠孝院區"></div>
+          <div class="fgroup"><label>單位英文名稱</label>
+            <input type="text" id="su-un-en" placeholder="Respiratory Care Ward"></div>
+          <div class="fgroup"><label>單位中文名稱</label>
+            <input type="text" id="su-un-zh" placeholder="呼吸照護病房"></div>
+          <div class="fgroup"><label>照護儲存檔名</label>
+            <input type="text" id="su-fname" placeholder="A13_NursingRecords.xml"></div>
+          <div class="fgroup"><label>資料存放位置說明</label>
+            <input type="text" id="su-floc" placeholder="Google Drive / 本機備份"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="btn btn-c1" onclick="saveSetup()">💾 儲存設定</button>
+          <button type="button" class="btn btn-gray" onclick="loadSetupUI()">↩ 還原</button>
+          <button type="button" class="btn" style="background:#7b1fa2;color:#fff" onclick="exportSingleXML('setup')">⬇ 匯出 Setup.xml</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <div class="card-hdr" style="background:#37474f">📄 目前 Setup.xml 內容</div>
+      <div class="card-body">
+        <div class="xml-view" id="su-xml-preview" style="max-height:200px">（儲存後顯示）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 照護人員 Caregivers.xml ══════ -->
+  <div class="pane" id="pane-cg">
+    <div class="sec-bar">
+      <h3 style="color:var(--met-h)">👩‍⚕️ 照護人員管理 (Caregivers.xml)</h3>
+      <div class="btns">
+        <button type="button" class="btn btn-met" onclick="openCgForm()">＋ 新增人員</button>
+        <button type="button" class="btn" style="background:#7b1fa2;color:#fff" onclick="exportSingleXML('cg')">⬇ 匯出 Caregivers.xml</button>
+      </div>
+    </div>
+    <div id="cg-list"></div>
+  </div>
+
+  <!-- ══════ 病房管理 Ward.xml ══════ -->
+  <div class="pane" id="pane-ward">
+    <div class="sec-bar">
+      <h3 style="color:var(--out-h)">🛏 病房管理 (Ward.xml)</h3>
+      <div class="btns">
+        <button type="button" class="btn btn-out" onclick="openWardForm()">＋ 新增病房</button>
+        <button type="button" class="btn" style="background:#7b1fa2;color:#fff" onclick="exportSingleXML('ward')">⬇ 匯出 Ward.xml</button>
+      </div>
+    </div>
+    <div id="ward-list"></div>
+  </div>
+
 </main>
 
 <!-- ══════════════════════════════════════
@@ -478,7 +662,7 @@ html.m .id-badge{font-size:14px}
 <div class="modal">
   <div class="modal-hdr" style="background:var(--c0)">
     <h3 id="rec-form-title">新增護理主檔記錄</h3>
-    <button class="cls" onclick="closeOv('ov-rec')">✕</button>
+    <button type="button" class="cls" onclick="closeOv('ov-rec')">✕</button>
   </div>
   <div class="modal-body">
     <div class="key-box">
@@ -504,15 +688,22 @@ html.m .id-badge{font-size:14px}
               <option value="C">C 組</option>
             </select>
           </div>
-          <div class="fgroup"><label>護士姓名</label><input type="text" id="rf-nm" placeholder="吳玉柱"></div>
-          <div class="fgroup"><label>單位</label><input type="text" id="rf-unit" placeholder="RCW"></div>
-          <div class="fgroup"><label>員編</label><input type="text" id="rf-emp" placeholder="N0960"></div>
+          <div class="fgroup"><label>員編（照護人員）*</label>
+            <select id="rf-emp" onchange="fillNurseFromEmp()">
+              <option value="">-- 選擇員編 --</option>
+            </select>
+          </div>
+          <div class="fgroup"><label>護理姓名（自動帶入）</label>
+            <input type="text" id="rf-nm" placeholder="選員編後自動填入" readonly
+              style="background:#e0f7fa;font-weight:700;color:var(--c0)"></div>
+          <div class="fgroup"><label>單位</label>
+            <input type="text" id="rf-unit" placeholder="RCW"></div>
         </div>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-gray" onclick="closeOv('ov-rec')">取消</button>
-      <button class="btn btn-c1" onclick="saveRec()">💾 儲存主檔</button>
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-rec')">取消</button>
+      <button type="button" class="btn btn-c1" onclick="saveRec()">💾 儲存主檔</button>
     </div>
   </div>
 </div>
@@ -523,7 +714,7 @@ html.m .id-badge{font-size:14px}
 <div class="modal">
   <div class="modal-hdr" style="background:var(--bed-h)">
     <h3 id="bed-form-title">新增床號（第二階）</h3>
-    <button class="cls" onclick="closeOv('ov-bed')">✕</button>
+    <button type="button" class="cls" onclick="closeOv('ov-bed')">✕</button>
   </div>
   <div class="modal-body">
     <div class="key-box">
@@ -544,8 +735,8 @@ html.m .id-badge{font-size:14px}
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-gray" onclick="closeOv('ov-bed')">取消</button>
-      <button class="btn btn-bed" onclick="saveBed()">💾 儲存床號</button>
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-bed')">取消</button>
+      <button type="button" class="btn btn-bed" onclick="saveBed()">💾 儲存床號</button>
     </div>
   </div>
 </div>
@@ -556,7 +747,7 @@ html.m .id-badge{font-size:14px}
 <div class="modal">
   <div class="modal-hdr" style="background:var(--feed-h)">
     <h3 id="feed-form-title">🍼 新增餵食明細</h3>
-    <button class="cls" onclick="closeOv('ov-feed')">✕</button>
+    <button type="button" class="cls" onclick="closeOv('ov-feed')">✕</button>
   </div>
   <div class="modal-body">
     <div class="key-box" style="background:#2d1b00;color:#fab387">
@@ -567,7 +758,7 @@ html.m .id-badge{font-size:14px}
       <div class="fsec-hdr" style="background:var(--feed-h)">🍼 餵食資料</div>
       <div class="fsec-body" style="background:var(--feed-b)">
         <div class="fgrid">
-          <div class="fgroup"><label>時間</label><input type="time" id="ff-time"></div>
+          <div class="fgroup"><label>時間（24H）</label><input type="text" id="ff-time" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
           <div class="fgroup"><label>餵食奶 (ml)</label><input type="number" id="ff-milk" placeholder="0" oninput="calcFeedSub()"></div>
           <div class="fgroup"><label>餵食水 (ml)</label><input type="number" id="ff-fw" placeholder="0" oninput="calcFeedSub()"></div>
           <div class="fgroup"><label>高蛋白 (ml)</label><input type="number" id="ff-pro" placeholder="0" oninput="calcFeedSub()"></div>
@@ -581,8 +772,8 @@ html.m .id-badge{font-size:14px}
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-gray" onclick="closeOv('ov-feed')">取消</button>
-      <button class="btn btn-feed" onclick="saveFeed()">💾 儲存餵食明細</button>
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-feed')">取消</button>
+      <button type="button" class="btn btn-feed" onclick="saveFeed()">💾 儲存餵食明細</button>
     </div>
   </div>
 </div>
@@ -593,7 +784,7 @@ html.m .id-badge{font-size:14px}
 <div class="modal">
   <div class="modal-hdr" style="background:var(--out-h)">
     <h3 id="out-form-title">💧 新增排出明細</h3>
-    <button class="cls" onclick="closeOv('ov-out')">✕</button>
+    <button type="button" class="cls" onclick="closeOv('ov-out')">✕</button>
   </div>
   <div class="modal-body">
     <div class="key-box" style="background:#001a00;color:#a6e3a1">
@@ -604,7 +795,7 @@ html.m .id-badge{font-size:14px}
       <div class="fsec-hdr" style="background:var(--out-h)">💧 排出資料</div>
       <div class="fsec-body" style="background:var(--out-b)">
         <div class="fgrid">
-          <div class="fgroup"><label>時間</label><input type="time" id="of-time"></div>
+          <div class="fgroup"><label>時間（24H）</label><input type="text" id="of-time" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
           <div class="fgroup"><label>尿量 (ml)</label><input type="number" id="of-ur" placeholder="0"></div>
           <div class="fgroup"><label>屎量 (ml)</label><input type="number" id="of-st" placeholder="0"></div>
           <div class="fgroup"><label>尿與屎</label><input type="number" id="of-cb" placeholder="0"></div>
@@ -613,8 +804,8 @@ html.m .id-badge{font-size:14px}
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-gray" onclick="closeOv('ov-out')">取消</button>
-      <button class="btn btn-out" onclick="saveOut()">💾 儲存排出明細</button>
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-out')">取消</button>
+      <button type="button" class="btn btn-out" onclick="saveOut()">💾 儲存排出明細</button>
     </div>
   </div>
 </div>
@@ -625,7 +816,7 @@ html.m .id-badge{font-size:14px}
 <div class="modal">
   <div class="modal-hdr" style="background:var(--met-h)">
     <h3 id="met-form-title">⚖️ 新增體重腹圍明細</h3>
-    <button class="cls" onclick="closeOv('ov-met')">✕</button>
+    <button type="button" class="cls" onclick="closeOv('ov-met')">✕</button>
   </div>
   <div class="modal-body">
     <div class="key-box" style="background:#00003d;color:#74c7ec">
@@ -636,7 +827,7 @@ html.m .id-badge{font-size:14px}
       <div class="fsec-hdr" style="background:var(--met-h)">⚖️ 體重 / 翻身 / 腹圍</div>
       <div class="fsec-body" style="background:var(--met-b)">
         <div class="fgrid">
-          <div class="fgroup"><label>記錄時間</label><input type="time" id="mf-time"></div>
+          <div class="fgroup"><label>記錄時間（24H）</label><input type="text" id="mf-time" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
           <div class="fgroup"><label>體重 (kg)</label><input type="number" step="0.1" id="mf-wt" placeholder="0.0"></div>
           <div class="fgroup"><label>前次體重 (kg)</label><input type="number" step="0.1" id="mf-pw" placeholder="0.0"></div>
           <div class="fgroup"><label>翻身方向</label>
@@ -647,7 +838,7 @@ html.m .id-badge{font-size:14px}
               <option value="平躺">平躺</option>
             </select>
           </div>
-          <div class="fgroup"><label>翻身時間</label><input type="time" id="mf-tt"></div>
+          <div class="fgroup"><label>翻身時間（24H）</label><input type="text" id="mf-tt" class="time-inp" placeholder="HH:MM" maxlength="5" oninput="timeFmt(this)" autocomplete="off"></div>
           <div class="fgroup"><label>腹圍 (cm)</label><input type="number" step="0.1" id="mf-ab" placeholder="0.0"></div>
           <div class="fgroup"><label>尿袋標記</label>
             <select id="mf-ub">
@@ -660,8 +851,8 @@ html.m .id-badge{font-size:14px}
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn btn-gray" onclick="closeOv('ov-met')">取消</button>
-      <button class="btn btn-met" onclick="saveMet()">💾 儲存體重腹圍明細</button>
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-met')">取消</button>
+      <button type="button" class="btn btn-met" onclick="saveMet()">💾 儲存體重腹圍明細</button>
     </div>
   </div>
 </div>
@@ -670,26 +861,133 @@ html.m .id-badge{font-size:14px}
 <!-- ══════════════════════════════════════
      JavaScript
 ══════════════════════════════════════ -->
+<!-- Modal：照護人員（新增/修改）-->
+<div class="ov" id="ov-cg">
+<div class="modal">
+  <div class="modal-hdr" style="background:var(--met-h)">
+    <h3 id="cg-form-title">新增照護人員</h3>
+    <button type="button" class="cls" onclick="closeOv('ov-cg')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="key-box" style="background:#00003d;color:#74c7ec">
+      <span class="lbl" style="color:#6c7086">鍵值：員編（唯一）</span>
+      <span class="val" id="cg-id-preview">—</span>
+    </div>
+    <div class="fsec">
+      <div class="fsec-hdr" style="background:var(--met-h)">👩‍⚕️ 人員資料</div>
+      <div class="fsec-body" style="background:var(--met-b)">
+        <div class="fgrid">
+          <div class="fgroup"><label>員編 *</label>
+            <input type="text" id="cg-emp" placeholder="N0960" oninput="this.value=this.value.toUpperCase();document.getElementById('cg-id-preview').textContent=this.value||'—'">
+          </div>
+          <div class="fgroup"><label>姓名 *</label>
+            <input type="text" id="cg-name" placeholder="吳玉柱"></div>
+          <div class="fgroup" style="grid-column:1/-1"><label>技術士證照</label>
+            <select id="cg-lic">
+              <option value="">無</option>
+              <option value="單一級技術士">單一級技術士</option>
+              <option value="甲級技術士">甲級技術士</option>
+              <option value="乙級技術士">乙級技術士</option>
+              <option value="丙級技術士">丙級技術士</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-cg')">取消</button>
+      <button type="button" class="btn btn-met" onclick="saveCg()">💾 儲存人員</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Modal：病房（新增/修改）-->
+<div class="ov" id="ov-ward">
+<div class="modal">
+  <div class="modal-hdr" style="background:var(--out-h)">
+    <h3 id="ward-form-title">新增病房</h3>
+    <button type="button" class="cls" onclick="closeOv('ov-ward')">✕</button>
+  </div>
+  <div class="modal-body">
+    <div class="key-box" style="background:#001a00;color:#a6e3a1">
+      <span class="lbl" style="color:#6c7086">鍵值：病房編號（唯一）</span>
+      <span class="val" id="ward-id-preview">—</span>
+    </div>
+    <div class="fsec">
+      <div class="fsec-hdr" style="background:var(--out-h)">🛏 病房資料</div>
+      <div class="fsec-body" style="background:var(--out-b)">
+        <div class="fgrid">
+          <div class="fgroup"><label>病房編號 *</label>
+            <input type="text" id="wd-no" placeholder="8202" oninput="document.getElementById('ward-id-preview').textContent=this.value||'—'">
+          </div>
+          <div class="fgroup" style="grid-column:1/-1"><label>病房說明（個資保護：請勿填入姓名等個人資料）</label>
+            <input type="text" id="wd-desc" placeholder="例：單人病房、靠窗、呼吸器使用中">
+          </div>
+        </div>
+        <div style="margin-top:8px;padding:8px;background:#fff9c4;border-radius:5px;font-size:13px;color:#e65100">
+          🔒 個資保護提醒：病房說明欄請勿填入病患姓名、身分證字號等個人識別資訊。
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn btn-gray" onclick="closeOv('ov-ward')">取消</button>
+      <button type="button" class="btn btn-out" onclick="saveWard()">💾 儲存病房</button>
+    </div>
+  </div>
+</div>
+</div>
+
 <!-- ══════ 數字九宮格 ══════ -->
 <div class="np-wrap" id="np-wrap">
   <div class="np-box">
     <div class="np-fieldname" id="np-field">數值輸入</div>
     <div class="np-disp" id="np-disp">0</div>
     <div class="np-grid">
-      <button class="np-key" onclick="npKey('7')">7</button>
-      <button class="np-key" onclick="npKey('8')">8</button>
-      <button class="np-key" onclick="npKey('9')">9</button>
-      <button class="np-key" onclick="npKey('4')">4</button>
-      <button class="np-key" onclick="npKey('5')">5</button>
-      <button class="np-key" onclick="npKey('6')">6</button>
-      <button class="np-key" onclick="npKey('1')">1</button>
-      <button class="np-key" onclick="npKey('2')">2</button>
-      <button class="np-key" onclick="npKey('3')">3</button>
-      <button class="np-key k-dot" onclick="npKey('.')">．</button>
-      <button class="np-key" onclick="npKey('0')">0</button>
-      <button class="np-key k-back" onclick="npBack()">⌫</button>
+      <button type="button" class="np-key" onclick="npKey('7')">7</button>
+      <button type="button" class="np-key" onclick="npKey('8')">8</button>
+      <button type="button" class="np-key" onclick="npKey('9')">9</button>
+      <button type="button" class="np-key" onclick="npKey('4')">4</button>
+      <button type="button" class="np-key" onclick="npKey('5')">5</button>
+      <button type="button" class="np-key" onclick="npKey('6')">6</button>
+      <button type="button" class="np-key" onclick="npKey('1')">1</button>
+      <button type="button" class="np-key" onclick="npKey('2')">2</button>
+      <button type="button" class="np-key" onclick="npKey('3')">3</button>
+      <button type="button" class="np-key k-dot" onclick="npKey('.')">．</button>
+      <button type="button" class="np-key" onclick="npKey('0')">0</button>
+      <button type="button" class="np-key k-back" onclick="npBack()">⌫</button>
     </div>
-    <button class="np-confirm" onclick="npDone()">✓ 確認</button>
+    <button type="button" class="np-confirm" onclick="npDone()">✓ 確認</button>
+  </div>
+</div>
+
+<!-- ══════ 時間九宮格（24H制）══════ -->
+<div class="tp-wrap" id="tp-wrap">
+  <div class="tp-box">
+    <div class="tp-fieldname" id="tp-field">時間輸入（24小時制）</div>
+    <div class="tp-disp">
+      <div class="tp-seg empty" id="tp-hh">--</div>
+      <div class="tp-colon">:</div>
+      <div class="tp-seg empty" id="tp-mm">--</div>
+    </div>
+    <div class="tp-hint-wrap">
+      <span class="tp-hint ph" id="tp-hint">請輸入小時（00～23）</span>
+    </div>
+    <div class="tp-grid">
+      <button type="button" class="tp-key" onclick="tpKey('7')">7</button>
+      <button type="button" class="tp-key" onclick="tpKey('8')">8</button>
+      <button type="button" class="tp-key" onclick="tpKey('9')">9</button>
+      <button type="button" class="tp-key" onclick="tpKey('4')">4</button>
+      <button type="button" class="tp-key" onclick="tpKey('5')">5</button>
+      <button type="button" class="tp-key" onclick="tpKey('6')">6</button>
+      <button type="button" class="tp-key" onclick="tpKey('1')">1</button>
+      <button type="button" class="tp-key" onclick="tpKey('2')">2</button>
+      <button type="button" class="tp-key" onclick="tpKey('3')">3</button>
+      <button type="button" class="tp-key tp-clr" onclick="tpClear()">清除</button>
+      <button type="button" class="tp-key" onclick="tpKey('0')">0</button>
+      <button type="button" class="tp-key tp-back" onclick="tpBack()">⌫</button>
+    </div>
+    <button type="button" class="tp-confirm" id="tp-confirm" onclick="tpDone()" disabled>✓ 確認</button>
   </div>
 </div>
 
@@ -712,20 +1010,88 @@ let DB=[];  // 主資料陣列
    資料存取
 ═══════════════════════════════════════ */
 async function load(){
-  try{const r=await window.storage.get('a13v3');if(r?.value)DB=fromXML(r.value);}
-  catch{DB=[];}
+  try{
+    const r=await window.storage.get('a13v3');
+    if(r?.value){
+      const parsed=fromXML(r.value);
+      if(parsed!==null){          // null = 解析錯誤
+        DB=parsed;
+        try{localStorage.setItem('a13v3_bak',r.value);}catch{}
+        return;
+      }
+    }
+    // window.storage 無資料或解析失敗 → 嘗試 localStorage 備份
+    const bak=localStorage.getItem('a13v3_bak');
+    if(bak){const p=fromXML(bak);if(p!==null)DB=p;}
+  }catch{
+    try{
+      const bak=localStorage.getItem('a13v3_bak');
+      if(bak){const p=fromXML(bak);if(p!==null)DB=p;}
+    }catch{DB=[];}
+  }
 }
 async function persist(){
-  try{await window.storage.set('a13v3',toXML(DB));}catch(e){console.error(e);}
+  if(!DB||DB.length===0){
+    // 若 DB 是空的，先確認 storage 也是空的才允許儲存，防止意外清空
+    try{
+      const r=await window.storage.get('a13v3');
+      if(r?.value&&r.value.includes('<record')){
+        console.warn('persist() 阻止：DB 為空但 storage 有資料，跳過儲存');
+        return; // 保護：不覆蓋有資料的 storage
+      }
+    }catch{}
+  }
+  const xml=toXML(DB);
+  try{await window.storage.set('a13v3',xml);}catch(e){console.error('storage 儲存失敗:',e);}
+  // 同步備份至 localStorage（雙保險）
+  try{localStorage.setItem('a13v3_bak',xml);}catch{}
 }
 
 /* ═══════════════════════════════════════
-   XML 解析（三階）
+   資料修復：修正舊格式錯誤的 ID 與 serial
+   舊格式：20260428NB018202001（缺少類型碼 F/O/M）
+   新格式：20260428NB018202O01（含類型碼）
 ═══════════════════════════════════════ */
+async function migrateDB(){
+  let changed = false;
+  DB.forEach(r => {
+    (r.beds||[]).forEach(b => {
+      // ── 餵食明細 ──
+      (b.feedDetails||[]).forEach((f, i) => {
+        const sn = String(i+1).padStart(2,'0');
+        const correctId = mkFeedId(b.id, sn);
+        if(f.id !== correctId || f.serial !== sn){
+          f.id = correctId; f.serial = sn; changed = true;
+        }
+      });
+      // ── 排出明細 ──
+      (b.outputDetails||[]).forEach((o, i) => {
+        const sn = String(i+1).padStart(2,'0');
+        const correctId = mkOutId(b.id, sn);
+        if(o.id !== correctId || o.serial !== sn){
+          o.id = correctId; o.serial = sn; changed = true;
+        }
+      });
+      // ── 體重腹圍明細 ──
+      (b.metricDetails||[]).forEach((m, i) => {
+        const sn = String(i+1).padStart(2,'0');
+        const correctId = mkMetId(b.id, sn);
+        if(m.id !== correctId || m.serial !== sn){
+          m.id = correctId; m.serial = sn; changed = true;
+        }
+      });
+    });
+  });
+  if(changed){
+    await persist(); // 修正後立即儲存
+    console.log('migrateDB：已修正舊格式 ID 並重新儲存');
+  }
+}
 function fromXML(str){
+  if(!str||!str.includes('<record'))return []; // 確實是空資料
   try{
     const doc=new DOMParser().parseFromString(str,'text/xml');
-    if(doc.querySelector('parsererror'))return[];
+    if(doc.querySelector('parsererror')){console.error('XML 解析錯誤');return null;}
     return cels(doc.documentElement,'record').map(r=>({
       id:r.getAttribute('id')||'',
       date:ct(r,'date'),shift:ct(r,'shift'),group:ct(r,'group'),serial:ct(r,'serial'),
@@ -753,7 +1119,7 @@ function fromXML(str){
         }))
       }))
     }));
-  }catch{return[];}
+  }catch(e){console.error('fromXML 例外:',e);return null;}
 }
 // DOM 輔助
 function ct(el,tag){for(const c of el.children)if(c.tagName===tag)return c.textContent;return'';}
@@ -811,13 +1177,12 @@ function xe(v){if(!v&&v!==0)return '';return String(v)
 /* ═══════════════════════════════════════
    流水號（每日/每床分開計數）
 ═══════════════════════════════════════ */
-async function nextSN(key){
-  let n=0;
-  try{const r=await window.storage.get('sn_'+key);if(r?.value)n=parseInt(r.value)||0;}catch{}
-  n++;
-  try{await window.storage.set('sn_'+key,String(n));}catch{}
-  return String(n).padStart(2,'0');
-}
+/* ── 序號：直接從陣列長度計算，最可靠 ── */
+function nextFeedSN(bed){ return String((bed.feedDetails||[]).length+1).padStart(2,'0'); }
+function nextOutSN(bed){  return String((bed.outputDetails||[]).length+1).padStart(2,'0'); }
+function nextMetSN(bed){  return String((bed.metricDetails||[]).length+1).padStart(2,'0'); }
+// 主檔序號仍用當日已有筆數+1
+function nextRecSN(date){ return String(DB.filter(r=>r.date===date).length+1).padStart(2,'0'); }
 // ID 工廠
 function mkRecId(d,sh,gr,sn){return d.replace(/-/g,'')+sh+gr+sn;}
 function mkBedId(rid,bed){return rid+bed;}
@@ -914,13 +1279,13 @@ function renderL1(){
   let h=`<div class="sec-bar">
     <h3 style="color:var(--c1)">📋 ${disp(S.date)} 護理主檔</h3>
     <div class="btns">
-      <button class="btn btn-c1" onclick="openRecForm()">＋ 新增主檔</button>
+      <button type="button" class="btn btn-c1" onclick="openRecForm()">＋ 新增主檔</button>
     </div>
   </div>`;
   if(!dayRecs.length){
     return h+`<div class="empty"><div class="icon">📄</div>
       <div>此日期尚無護理主檔記錄</div>
-      <div style="margin-top:10px"><button class="btn btn-c1" onclick="openRecForm()">＋ 新增第一筆</button></div></div>`;
+      <div style="margin-top:10px"><button type="button" class="btn btn-c1" onclick="openRecForm()">＋ 新增第一筆</button></div></div>`;
   }
   dayRecs.forEach(r=>{
     const bedCnt=r.beds?.length||0;
@@ -940,8 +1305,8 @@ function renderL1(){
         </div>
       </div>
       <div class="acts">
-        <button class="btn btn-c1 btn-xs" onclick="openRecForm('${r.id}')">✏ 修改</button>
-        <button class="btn btn-red btn-xs" onclick="delRec('${r.id}')">🗑</button>
+        <button type="button" class="btn btn-c1 btn-xs" onclick="openRecForm('${r.id}')">✏ 修改</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delRec('${r.id}')">🗑</button>
       </div>
     </div>`;
   });
@@ -959,13 +1324,13 @@ function renderL2(){
   let h=`<div class="sec-bar">
     <h3 style="color:var(--bed-h)">🛏 床號主檔 ／ ${r.id}</h3>
     <div class="btns">
-      <button class="btn btn-bed" onclick="openBedForm()">＋ 新增床號</button>
+      <button type="button" class="btn btn-bed" onclick="openBedForm()">＋ 新增床號</button>
     </div>
   </div>`;
 
   if(!beds.length){
     h+=`<div class="empty"><div class="icon">🛏</div><div>尚未新增任何床號</div>
-      <div style="margin-top:10px"><button class="btn btn-bed" onclick="openBedForm()">＋ 新增床號</button></div></div>`;
+      <div style="margin-top:10px"><button type="button" class="btn btn-bed" onclick="openBedForm()">＋ 新增床號</button></div></div>`;
     return h;
   }
 
@@ -1016,8 +1381,8 @@ function renderL2(){
       <td class="s-turn">${lm.turnDir||''} ${lm.turnTime||''}</td>
       <td class="s-abd">${lm.abdomen||''}</td><td>${lm.urineBag||''}</td>
       <td>
-        <button class="btn btn-c1 btn-xs" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">明細</button>
-        <button class="btn btn-red btn-xs" onclick="delBed('${b.id}')">🗑</button>
+        <button type="button" class="btn btn-c1 btn-xs" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">明細</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delBed('${b.id}')">🗑</button>
       </td>
     </tr>`;
   });
@@ -1037,8 +1402,8 @@ function renderL2(){
         </div>
       </div>
       <div class="acts">
-        <button class="btn btn-c1 btn-xs" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">明細 →</button>
-        <button class="btn btn-red btn-xs" onclick="delBed('${b.id}')">🗑</button>
+        <button type="button" class="btn btn-c1 btn-xs" onclick="goLevel(3,{recId:'${r.id}',bedId:'${b.id}'})">明細 →</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delBed('${b.id}')">🗑</button>
       </div>
     </div>`;
   });
@@ -1075,7 +1440,7 @@ function renderL3(){
   h+=`<div class="dtab-panel feed-panel${S.dtab==='feed'?' on':''}" id="dp-feed">
     <div class="sec-bar">
       <h4 style="color:var(--feed-h)">🍼 餵食明細 (第三階-A)</h4>
-      <button class="btn btn-feed btn-sm" onclick="openFeedForm()">＋ 新增餵食</button>
+      <button type="button" class="btn btn-feed btn-sm" onclick="openFeedForm()">＋ 新增餵食</button>
     </div>
     ${renderFeedTable(bed)}
   </div>`;
@@ -1084,7 +1449,7 @@ function renderL3(){
   h+=`<div class="dtab-panel out-panel${S.dtab==='output'?' on':''}" id="dp-output">
     <div class="sec-bar">
       <h4 style="color:var(--out-h)">💧 排出明細 (第三階-B)</h4>
-      <button class="btn btn-out btn-sm" onclick="openOutForm()">＋ 新增排出</button>
+      <button type="button" class="btn btn-out btn-sm" onclick="openOutForm()">＋ 新增排出</button>
     </div>
     ${renderOutTable(bed)}
   </div>`;
@@ -1093,7 +1458,7 @@ function renderL3(){
   h+=`<div class="dtab-panel met-panel${S.dtab==='metric'?' on':''}" id="dp-metric">
     <div class="sec-bar">
       <h4 style="color:var(--met-h)">⚖️ 體重腹圍明細 (第三階-C)</h4>
-      <button class="btn btn-met btn-sm" onclick="openMetForm()">＋ 新增體重腹圍</button>
+      <button type="button" class="btn btn-met btn-sm" onclick="openMetForm()">＋ 新增體重腹圍</button>
     </div>
     ${renderMetTable(bed)}
   </div>`;
@@ -1109,7 +1474,7 @@ function renderFeedTable(bed){
       <th>鍵值 ID</th><th>序號</th><th>時間</th><th>奶(ml)</th><th>水(ml)</th>
       <th>高蛋白</th><th>藥+水</th><th>餵水</th><th>其他</th><th>小計</th><th>操作</th>
     </tr></thead><tbody>`;
-  rows.forEach(f=>{
+  rows.forEach((f,idx)=>{
     h+=`<tr>
       <td class="det-key">${f.id}</td>
       <td>${f.serial}</td><td>${f.feedTime}</td>
@@ -1118,8 +1483,8 @@ function renderFeedTable(bed){
       <td class="s-feed">${f.directFeed}</td><td class="s-feed">${f.otherFeed}</td>
       <td class="s-sub">${f.subtotal}</td>
       <td>
-        <button class="btn btn-feed btn-xs" onclick="openFeedForm('${f.id}')">✏️</button>
-        <button class="btn btn-red btn-xs" onclick="delFeed('${f.id}')">🗑</button>
+        <button type="button" class="btn btn-feed btn-xs" onclick="openFeedForm(${idx})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delFeed('${f.id}')">🗑</button>
       </td>
     </tr>`;
   });
@@ -1148,7 +1513,7 @@ function renderOutTable(bed){
       <th>鍵值 ID</th><th>序號</th><th>時間</th>
       <th>尿量(ml)</th><th>屎量(ml)</th><th>尿與屎</th><th>引流(ml)</th><th>操作</th>
     </tr></thead><tbody>`;
-  rows.forEach(o=>{
+  rows.forEach((o,idx)=>{
     h+=`<tr>
       <td class="det-key">${o.id}</td>
       <td>${o.serial}</td><td>${o.outputTime}</td>
@@ -1157,8 +1522,8 @@ function renderOutTable(bed){
       <td class="s-drain">${o.combined}</td>
       <td class="s-drain">${o.drain}</td>
       <td>
-        <button class="btn btn-out btn-xs" onclick="openOutForm('${o.id}')">✏️</button>
-        <button class="btn btn-red btn-xs" onclick="delOut('${o.id}')">🗑</button>
+        <button type="button" class="btn btn-out btn-xs" onclick="openOutForm(${idx})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delOut('${o.id}')">🗑</button>
       </td>
     </tr>`;
   });
@@ -1184,7 +1549,7 @@ function renderMetTable(bed){
       <th>體重</th><th>前次體重</th><th>翻身↑</th><th>翻身時間</th>
       <th>腹圍</th><th>尿袋</th><th>操作</th>
     </tr></thead><tbody>`;
-  rows.forEach(m=>{
+  rows.forEach((m,idx)=>{
     h+=`<tr>
       <td class="det-key">${m.id}</td>
       <td>${m.serial}</td><td>${m.metricTime}</td>
@@ -1192,8 +1557,8 @@ function renderMetTable(bed){
       <td class="s-turn">${m.turnDir}</td><td class="s-turn">${m.turnTime}</td>
       <td class="s-abd">${m.abdomen}</td><td>${m.urineBag}</td>
       <td>
-        <button class="btn btn-met btn-xs" onclick="openMetForm('${m.id}')">✏️</button>
-        <button class="btn btn-red btn-xs" onclick="delMet('${m.id}')">🗑</button>
+        <button type="button" class="btn btn-met btn-xs" onclick="openMetForm(${idx})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delMet('${m.id}')">🗑</button>
       </td>
     </tr>`;
   });
@@ -1213,9 +1578,11 @@ function openRecForm(id){
   document.getElementById('rf-date').value=r?.date||S.date||td2s(new Date());
   document.getElementById('rf-sh').value=r?.shift||'D';
   document.getElementById('rf-gr').value=r?.group||'A';
-  document.getElementById('rf-nm').value=r?.nurseName||'';
   document.getElementById('rf-unit').value=r?.unit||'';
   document.getElementById('rf-emp').value=r?.empNo||'';
+  // 姓名：先嘗試從 CAREGIVERS 找，找不到就用舊值
+  const cg=CAREGIVERS.find(c=>c.empNo===r?.empNo);
+  document.getElementById('rf-nm').value=cg?.name||r?.nurseName||'';
   previewRecId();
   openOv('ov-rec');
 }
@@ -1244,7 +1611,7 @@ async function saveRec(){
     }
     showMsg(`主檔 ${editRecId} 已更新`,'ok');
   }else{
-    const sn=await nextSN('rec_'+date.replace(/-/g,''));
+    const sn=nextRecSN(date);
     const id=mkRecId(date,shift,group,sn);
     DB.push({id,date,shift,group,serial:sn,nurseName,unit,empNo,
       createdAt:now,updatedAt:now,beds:[]});
@@ -1307,12 +1674,13 @@ async function delBed(bid){
    CRUD：第三階-A（餵食明細）
 ═══════════════════════════════════════ */
 let editFeedId=null;
-function openFeedForm(fid){
-  editFeedId=fid||null;
+function openFeedForm(idx){
   const bed=findBed(S.recId,S.bedId);
-  const f=fid?bed?.feedDetails?.find(x=>x.id===fid):null;
-  document.getElementById('feed-form-title').textContent=fid?'🍼 修改餵食明細':'🍼 新增餵食明細';
-  document.getElementById('feed-id-preview').textContent=fid||`${S.bedId}F__（新增時產生）`;
+  // idx 有值=修改，undefined=新增
+  const f=(idx!==undefined&&idx!==null)?bed?.feedDetails?.[idx]??null:null;
+  editFeedId=f?f.id:null;
+  document.getElementById('feed-form-title').textContent=f?'🍼 修改餵食明細':'🍼 新增餵食明細';
+  document.getElementById('feed-id-preview').textContent=f?f.id:`${S.bedId}F__（新增時產生）`;
   document.getElementById('ff-time').value=f?.feedTime||'';
   document.getElementById('ff-milk').value=f?.milk||'';
   document.getElementById('ff-fw').value=f?.feedWater||'';
@@ -1342,7 +1710,7 @@ async function saveFeed(){
     if(f)Object.assign(f,data);
     showMsg(`餵食明細 ${editFeedId} 已更新`,'ok');
   }else{
-    const sn=await nextSN('feed_'+S.bedId);
+    const sn=nextFeedSN(bed);
     const id=mkFeedId(S.bedId,sn);
     bed.feedDetails.push({id,serial:sn,...data});
     showMsg(`餵食明細 ${id} 已新增`,'ok');
@@ -1360,12 +1728,12 @@ async function delFeed(fid){
    CRUD：第三階-B（排出明細）
 ═══════════════════════════════════════ */
 let editOutId=null;
-function openOutForm(oid){
-  editOutId=oid||null;
+function openOutForm(idx){
   const bed=findBed(S.recId,S.bedId);
-  const o=oid?bed?.outputDetails?.find(x=>x.id===oid):null;
-  document.getElementById('out-form-title').textContent=oid?'💧 修改排出明細':'💧 新增排出明細';
-  document.getElementById('out-id-preview').textContent=oid||`${S.bedId}O__（新增時產生）`;
+  const o=(idx!==undefined&&idx!==null)?bed?.outputDetails?.[idx]??null:null;
+  editOutId=o?o.id:null;
+  document.getElementById('out-form-title').textContent=o?'💧 修改排出明細':'💧 新增排出明細';
+  document.getElementById('out-id-preview').textContent=o?o.id:`${S.bedId}O__（新增時產生）`;
   document.getElementById('of-time').value=o?.outputTime||'';
   document.getElementById('of-ur').value=o?.urine||'';
   document.getElementById('of-st').value=o?.stool||'';
@@ -1382,7 +1750,7 @@ async function saveOut(){
     if(o)Object.assign(o,data);
     showMsg(`排出明細 ${editOutId} 已更新`,'ok');
   }else{
-    const sn=await nextSN('out_'+S.bedId);
+    const sn=nextOutSN(bed);
     const id=mkOutId(S.bedId,sn);
     bed.outputDetails.push({id,serial:sn,...data});
     showMsg(`排出明細 ${id} 已新增`,'ok');
@@ -1400,12 +1768,12 @@ async function delOut(oid){
    CRUD：第三階-C（體重腹圍明細）
 ═══════════════════════════════════════ */
 let editMetId=null;
-function openMetForm(mid){
-  editMetId=mid||null;
+function openMetForm(idx){
   const bed=findBed(S.recId,S.bedId);
-  const m=mid?bed?.metricDetails?.find(x=>x.id===mid):null;
-  document.getElementById('met-form-title').textContent=mid?'⚖️ 修改體重腹圍明細':'⚖️ 新增體重腹圍明細';
-  document.getElementById('met-id-preview').textContent=mid||`${S.bedId}M__（新增時產生）`;
+  const m=(idx!==undefined&&idx!==null)?bed?.metricDetails?.[idx]??null:null;
+  editMetId=m?m.id:null;
+  document.getElementById('met-form-title').textContent=m?'⚖️ 修改體重腹圍明細':'⚖️ 新增體重腹圍明細';
+  document.getElementById('met-id-preview').textContent=m?m.id:`${S.bedId}M__（新增時產生）`;
   document.getElementById('mf-time').value=m?.metricTime||'';
   document.getElementById('mf-wt').value=m?.weight||'';
   document.getElementById('mf-pw').value=m?.prevWeight||'';
@@ -1425,7 +1793,7 @@ async function saveMet(){
     if(m)Object.assign(m,data);
     showMsg(`體重腹圍明細 ${editMetId} 已更新`,'ok');
   }else{
-    const sn=await nextSN('met_'+S.bedId);
+    const sn=nextMetSN(bed);
     const id=mkMetId(S.bedId,sn);
     bed.metricDetails.push({id,serial:sn,...data});
     showMsg(`體重腹圍明細 ${id} 已新增`,'ok');
@@ -1473,8 +1841,8 @@ function doSearch(){
         <div class="row-sub">床號(${bedCnt})：${beds}</div>
       </div>
       <div class="acts">
-        <button class="btn btn-c1 btn-xs" onclick="S.date='${r.date}';goLevel(2,{recId:'${r.id}'})">進入 →</button>
-        <button class="btn btn-red btn-xs" onclick="delRec('${r.id}')">🗑</button>
+        <button type="button" class="btn btn-c1 btn-xs" onclick="S.date='${r.date}';goLevel(2,{recId:'${r.id}'})">進入 →</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delRec('${r.id}')">🗑</button>
       </div>
     </div>`;
   });
@@ -1514,11 +1882,7 @@ function showXML(){
   document.getElementById('xc4').textContent=outs;
   document.getElementById('xc5').textContent=mets;
 }
-function exportXML(){
-  const b=new Blob([toXML(DB)],{type:'application/xml'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(b);
-  a.download=`a13_${td2s(new Date()).replace(/-/g,'')}.xml`;a.click();
-}
+function exportXML(){ mobileExport('main'); }
 async function clearAll(){
   if(!confirm('確定清除所有資料？無法復原！'))return;
   DB=[];await persist();drawCal();
@@ -1555,10 +1919,26 @@ function setTree(){
 /* ═══════════════════════════════════════
    Modal 控制
 ═══════════════════════════════════════ */
-function openOv(id){document.getElementById(id).classList.add('on');}
+function openOv(id){
+  const ov = document.getElementById(id);
+  ov.classList.add('on');
+  // 阻止 modal 內的點擊冒泡到 overlay，防止觸發任何外層事件
+  const modal = ov.querySelector('.modal');
+  if(modal && !modal._stopSet){
+    modal._stopSet = true;
+    modal.addEventListener('click', e => e.stopPropagation());
+    modal.addEventListener('touchend', e => e.stopPropagation());
+  }
+  // 防止 Modal 內按 Enter 觸發按鈕
+  ov.querySelectorAll('input,select').forEach(el=>{
+    el.addEventListener('keydown', function(e){
+      if(e.key==='Enter'){ e.preventDefault(); e.stopPropagation(); }
+    });
+  });
+}
 function closeOv(id){document.getElementById(id).classList.remove('on');}
-document.querySelectorAll('.ov').forEach(ov=>
-  ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('on');}));
+// 不設點擊背景關閉 Modal，防止編輯中誤觸導致資料消失
+// 使用者必須點 ✕ 或「取消」按鈕才能關閉
 
 /* ═══════════════════════════════════════
    Tab 切換
@@ -1570,6 +1950,9 @@ function goTab(t){
   document.querySelector(`[data-t="${t}"]`)?.classList.add('on');
   if(t==='rec'){renderBC();renderContent();}
   if(t==='xml')showXML();
+  if(t==='setup'){loadSetupUI();}
+  if(t==='cg'){renderCgList();}
+  if(t==='ward'){renderWardList();}
 }
 document.querySelectorAll('.nav-tab').forEach(tb=>
   tb.addEventListener('click',()=>goTab(tb.dataset.t)));
@@ -1609,16 +1992,23 @@ function toggleDev(){
 ═══════════════════════════════════════ */
 let npTarget = null;
 
-// 事件代理：任何 number input 獲得焦點時顯示九宮格
+let npLocked = false;
+
+/* ── focusin：數字欄 → 數字九宮格 ／ 時間欄 → 時間九宮格 ── */
 document.addEventListener('focusin', function(e){
+  if(npLocked) return;
   const el = e.target;
-  if(el && el.type === 'number'){
+  if(!el.closest('.ov') && !el.closest('.np-box') && !el.closest('.tp-box')) return;
+
+  if(el.type === 'number'){
     npTarget = el;
-    // 取得欄位標籤
     const lbl = el.closest('.fgroup')?.querySelector('label')?.textContent || '數值輸入';
     document.getElementById('np-field').textContent = lbl;
     document.getElementById('np-disp').textContent  = el.value || '0';
     document.getElementById('np-wrap').classList.add('on');
+  } else if(el.classList.contains('time-inp')){
+    const lbl = el.closest('.fgroup')?.querySelector('label')?.textContent || '時間輸入';
+    tpOpen(el, lbl);
   }
 });
 
@@ -1651,15 +2041,1156 @@ function npBack(){
 }
 
 function npDone(){
-  document.getElementById('np-wrap').classList.remove('on');
-  if(npTarget){ npTarget.blur(); npTarget = null; }
+  npLocked = true;
+  const wrap = document.getElementById('np-wrap');
+  wrap.style.pointerEvents = 'none';
+  wrap.classList.remove('on');
+
+  // ★ 關鍵修復：同時封鎖目前開著的 Modal 內容的點擊
+  //   ghost click 會穿透 np-wrap 打到 Modal 的 ✕ 或取消按鈕
+  document.querySelectorAll('.ov.on .modal').forEach(m=>{
+    m.style.pointerEvents = 'none';
+  });
+
+  setTimeout(()=>{
+    wrap.style.pointerEvents = '';
+    // 恢復 Modal 點擊
+    document.querySelectorAll('.ov .modal').forEach(m=>{
+      m.style.pointerEvents = '';
+    });
+    npTarget = null;
+    npLocked = false;
+  }, 500); // 延長至 500ms 確保 ghost click 過去
+}
+
+/* ═══════════════════════════════════════
+   時間九宮格（24小時制）
+   階段 h：輸入小時 HH（00-23）
+   階段 m：輸入分鐘 MM（00-59）
+═══════════════════════════════════════ */
+let tpTarget = null;   // 目前綁定的 time-inp 欄位
+let tpBuf    = '';     // 輸入緩衝，最多 4 碼數字
+let tpPhase  = 'h';   // 'h'=輸入小時 / 'm'=輸入分鐘
+
+function tpOpen(el, lbl){
+  tpTarget = el;
+  tpBuf    = (el.value||'').replace(':',''); // 還原成4碼數字
+  tpPhase  = 'h';
+  document.getElementById('tp-field').textContent = lbl;
+  // 若已有值就載入
+  if(tpBuf.length===4){
+    const hh=tpBuf.slice(0,2), mm=tpBuf.slice(2,4);
+    if(parseInt(hh)<=23 && parseInt(mm)<=59){
+      tpPhase='m';
+    } else {
+      tpBuf='';
+    }
+  } else {
+    tpBuf='';
+  }
+  tpRender();
+  document.getElementById('tp-wrap').classList.add('on');
+}
+
+function tpRender(){
+  const hhEl = document.getElementById('tp-hh');
+  const mmEl = document.getElementById('tp-mm');
+  const hint = document.getElementById('tp-hint');
+  const conf = document.getElementById('tp-confirm');
+
+  const hh = tpBuf.slice(0,2).padEnd(2,'_');
+  const mm = tpBuf.slice(2,4).padEnd(2,'_');
+
+  // 小時顯示
+  if(tpBuf.length>=2){
+    hhEl.textContent=tpBuf.slice(0,2);
+    hhEl.className='tp-seg done';
+  } else if(tpBuf.length>0){
+    hhEl.textContent=tpBuf.slice(0,1)+'_';
+    hhEl.className='tp-seg active';
+  } else {
+    hhEl.textContent='--';
+    hhEl.className='tp-seg '+(tpPhase==='h'?'active':'empty');
+  }
+
+  // 分鐘顯示
+  if(tpBuf.length>=4){
+    mmEl.textContent=tpBuf.slice(2,4);
+    mmEl.className='tp-seg done';
+  } else if(tpBuf.length===3){
+    mmEl.textContent=tpBuf.slice(2,3)+'_';
+    mmEl.className='tp-seg active';
+  } else {
+    mmEl.textContent='--';
+    mmEl.className='tp-seg '+(tpPhase==='m'?'active':'empty');
+  }
+
+  // 提示文字
+  if(tpPhase==='h'){
+    hint.textContent='請輸入小時（00 ～ 23）';
+    hint.className='tp-hint ph';
+  } else {
+    hint.textContent='請輸入分鐘（00 ～ 59）';
+    hint.className='tp-hint pm';
+  }
+
+  // 確認按鈕：滿4碼且值合法才啟用
+  const ok = tpBuf.length===4 &&
+             parseInt(tpBuf.slice(0,2))<=23 &&
+             parseInt(tpBuf.slice(2,4))<=59;
+  conf.disabled = !ok;
+}
+
+function tpKey(k){
+  if(tpPhase==='h'){
+    if(tpBuf.length>=2) return; // 小時已滿
+    const next = tpBuf + k;
+    // 即時合法性提示（超過23禁止）
+    if(next.length===2 && parseInt(next)>23){
+      document.getElementById('tp-hint').textContent='小時不可超過 23！';
+      document.getElementById('tp-hint').className='tp-hint err';
+      return;
+    }
+    tpBuf = next;
+    if(tpBuf.length===2) tpPhase='m'; // 小時完成，切換到分鐘
+  } else {
+    if(tpBuf.length>=4) return; // 分鐘已滿
+    const mm = tpBuf.slice(2) + k;
+    if(mm.length===2 && parseInt(mm)>59){
+      document.getElementById('tp-hint').textContent='分鐘不可超過 59！';
+      document.getElementById('tp-hint').className='tp-hint err';
+      return;
+    }
+    tpBuf = tpBuf.slice(0,2) + mm;
+  }
+  tpRender();
+}
+
+function tpBack(){
+  if(tpBuf.length===0) return;
+  tpBuf = tpBuf.slice(0,-1);
+  // 退回到小時階段
+  if(tpBuf.length<2) tpPhase='h';
+  else if(tpBuf.length===2) tpPhase='m';
+  tpRender();
+}
+
+function tpClear(){
+  tpBuf=''; tpPhase='h'; tpRender();
+}
+
+function tpDone(){
+  if(tpTarget && tpBuf.length===4){
+    const val=tpBuf.slice(0,2)+':'+tpBuf.slice(2,4);
+    tpTarget.value=val;
+    tpTarget.style.borderColor='#43a047';
+    tpTarget.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  npLocked=true;
+  const wrap=document.getElementById('tp-wrap');
+  wrap.style.pointerEvents='none';
+  wrap.classList.remove('on');
+  document.querySelectorAll('.ov.on .modal').forEach(m=>m.style.pointerEvents='none');
+  setTimeout(()=>{
+    wrap.style.pointerEvents='';
+    document.querySelectorAll('.ov .modal').forEach(m=>m.style.pointerEvents='');
+    tpTarget=null; tpBuf=''; tpPhase='h';
+    npLocked=false;
+  },500);
+}
+
+// 時間九宮格防 mousedown 失焦
+document.getElementById('tp-wrap').addEventListener('mousedown',function(e){
+  if(e.target!==this) e.preventDefault();
+});
+
+/* ═══════════════════════════════════════
+   24小時制時間自動格式化（手動輸入仍保留）
+═══════════════════════════════════════ */
+function timeFmt(el){
+  // 只保留數字與冒號
+  let v = el.value.replace(/[^0-9:]/g,'');
+  // 自動在第2位後加冒號
+  if(v.length >= 3 && !v.includes(':')){
+    v = v.slice(0,2) + ':' + v.slice(2);
+  }
+  // 最多5字元 HH:MM
+  el.value = v.slice(0,5);
+  // 填完5碼後驗證範圍
+  if(v.length === 5){
+    const [hh,mm] = v.split(':').map(Number);
+    if(hh > 23) el.value = '23:' + String(mm).padStart(2,'0');
+    if(mm > 59) el.value = v.slice(0,3) + '59';
+    el.style.borderColor = '#43a047';  // 綠色 = 有效
+  } else {
+    el.style.borderColor = '';
+  }
+}
+
+/* ═══════════════════════════════════════
+   Google Drive 整合
+   僅使用 client_id（前端安全）
+   Folder: 1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d
+═══════════════════════════════════════ */
+const GD = {
+  CLIENT_ID   : '296426745832-ui6j8ksr8ntchk7ad6ibbne40cqld3g9.apps.googleusercontent.com',
+  ROOT_ID     : '1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d', // 根資料夾
+  SCOPES      : 'https://www.googleapis.com/auth/drive',
+  MAIN_FILE   : 'A13_NursingRecords.xml',  // 護理主檔（存根資料夾）
+  SETUP_FILE  : 'Setup.xml',
+  CG_FILE     : 'Caregivers.xml',
+  WARD_FILE   : 'Ward.xml',
+  token       : null,   // access token
+  fileId      : null,   // 主檔 ID（根資料夾）
+  subFolderId : null,   // 機構子資料夾 ID
+  fileIds     : {},     // { setup, cg, ward } 各設定檔 ID
+};
+
+/* ── 驗證機構英文名稱與單位英文名稱不能為空白 ──
+   同時從表單欄位讀取（若 SETUP 物件未儲存也能正確取值）── */
+function gdCheckSetup(){
+  // 優先讀 SETUP 物件，若空則嘗試從表單欄位讀取
+  let hn = (SETUP.hospitalNameEn||'').trim();
+  let un = (SETUP.unitNameEn||'').trim();
+
+  // 若 SETUP 物件是空的，嘗試從目前表單欄位同步
+  if(!hn){
+    const el=document.getElementById('su-hn-en');
+    if(el) hn=el.value.trim();
+  }
+  if(!un){
+    const el=document.getElementById('su-un-en');
+    if(el) un=el.value.trim();
+  }
+
+  if(!hn && !un){
+    showMsg('⚠️ 請先至「⚙️ 系統設定」填入【機構英文名稱】與【單位英文名稱】後按儲存設定！','err');
+    goTab('setup');
+    return null;
+  }
+  if(!hn){
+    showMsg('⚠️ 請先至「⚙️ 系統設定」填入【機構英文名稱】，不可空白！','err');
+    goTab('setup');
+    return null;
+  }
+  if(!un){
+    showMsg('⚠️ 請先至「⚙️ 系統設定」填入【單位英文名稱】，不可空白！','err');
+    goTab('setup');
+    return null;
+  }
+  // 同步回 SETUP 物件（確保後續操作可用）
+  SETUP.hospitalNameEn = hn;
+  SETUP.unitNameEn = un;
+  return `${hn}-${un}`;
+}
+
+/* ── 取得或建立子資料夾 ── */
+async function gdGetOrCreateSubFolder(subName){
+  // 先查找是否已存在
+  const q=encodeURIComponent(
+    `'${GD.ROOT_ID}' in parents and name='${subName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const listRes=await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,
+    {headers:{Authorization:'Bearer '+GD.token}});
+  const listData=await listRes.json();
+  console.log('gdGetOrCreateSubFolder list:', listData);
+
+  if(listData.files && listData.files.length>0){
+    console.log('子資料夾已存在:', listData.files[0].id);
+    return listData.files[0].id;
+  }
+
+  // 不存在則建立
+  console.log('建立新子資料夾:', subName);
+  const meta={name:subName, mimeType:'application/vnd.google-apps.folder', parents:[GD.ROOT_ID]};
+  const createRes=await fetch('https://www.googleapis.com/drive/v3/files?fields=id,name',
+    {method:'POST',
+     headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/json'},
+     body:JSON.stringify(meta)});
+  const createData=await createRes.json();
+  console.log('建立子資料夾結果:', createData);
+
+  if(!createData.id){
+    throw new Error('建立子資料夾失敗：'+JSON.stringify(createData));
+  }
+  return createData.id;
+}
+
+/* ── 在指定資料夾尋找或建立 XML 檔案，回傳 {id, exists} ── */
+async function gdFindOrCreateFile(folderId, filename){
+  const q=encodeURIComponent(
+    `'${folderId}' in parents and name='${filename}' and trashed=false`);
+  const r=await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)`,
+    {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
+  if(r.files && r.files.length>0){
+    return {id:r.files[0].id, exists:true, modifiedTime:r.files[0].modifiedTime};
+  }
+  return {id:null, exists:false};
+}
+
+/* ── 上傳單一 XML（更新或新建）── */
+async function gdUploadFile(fileId, folderId, filename, content){
+  const blob=new Blob([content],{type:'application/xml'});
+  let res;
+  if(fileId){
+    // 更新既有檔案
+    const r=await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+      {method:'PATCH',headers:{Authorization:'Bearer '+GD.token,'Content-Type':'application/xml'},body:blob});
+    res=await r.json();
+    console.log(`更新 ${filename}:`, res);
+  }else{
+    // 新建檔案
+    const meta=JSON.stringify({name:filename,parents:[folderId]});
+    const form=new FormData();
+    form.append('metadata',new Blob([meta],{type:'application/json'}));
+    form.append('file',blob);
+    const r=await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+      {method:'POST',headers:{Authorization:'Bearer '+GD.token},body:form});
+    res=await r.json();
+    console.log(`新建 ${filename}:`, res);
+  }
+  if(!res.id) throw new Error(`${filename} 上傳失敗：${JSON.stringify(res)}`);
+  return res.id;
+}
+
+/* ── 下載單一 XML ── */
+async function gdDownloadFile(fileId){
+  return await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.text());
+}
+
+/* ── Google 登入（OAuth2 implicit flow）── */
+function gdLogin(){
+  if(!window.google){showMsg('Google 身份驗證尚未載入，請稍候再試','err');return;}
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id : GD.CLIENT_ID,
+    scope     : GD.SCOPES,
+    callback  : async(resp)=>{
+      if(resp.error){gdStatus('登入失敗：'+resp.error,'#ff8a80');return;}
+      GD.token = resp.access_token;
+      // 取得使用者資訊
+      try{
+        const ui = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',
+          {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
+        const area = document.getElementById('gd-user-area');
+        area.innerHTML = `<div class="gd-user">
+          ${ui.picture?`<img class="gd-avatar" src="${ui.picture}" alt="">`:''}
+          <span style="font-size:12px;font-weight:700">${ui.name||ui.email}</span>
+        </div>`;
+      }catch{}
+      document.getElementById('gd-login-btn').style.display='none';
+      document.getElementById('gd-logout-btn').style.display='';
+      document.getElementById('gd-save-btn').disabled=false;
+      document.getElementById('gd-load-btn').disabled=false;
+      gdStatus('✅ 已登入，可進行 Drive 同步','#b9f6ca');
+      // 自動查找既有檔案 ID
+      await gdFindFile();
+    }
+  });
+  client.requestAccessToken();
+}
+
+/* ── 登出 ── */
+function gdLogout(){
+  if(GD.token) google.accounts.oauth2.revoke(GD.token, ()=>{});
+  GD.token=null; GD.fileId=null;
+  document.getElementById('gd-login-btn').style.display='';
+  document.getElementById('gd-logout-btn').style.display='none';
+  document.getElementById('gd-save-btn').disabled=true;
+  document.getElementById('gd-load-btn').disabled=true;
+  document.getElementById('gd-user-area').innerHTML='';
+  gdStatus('已登出 Google 帳號','');
+}
+
+/* ── 狀態文字 ── */
+function gdStatus(msg, color){
+  const el=document.getElementById('gd-status');
+  el.textContent=msg;
+  el.style.color=color||'';
+}
+
+/* ── 登入後自動查找既有檔案 ── */
+async function gdFindFile(){
+  if(!GD.token) return;
+  const subName = gdCheckSetup();
+  if(!subName){
+    gdStatus('⚠️ 請先設定機構英文名稱與單位英文名稱','#ff8a80');
+    return;
+  }
+  try{
+    // 查找子資料夾
+    const q=encodeURIComponent(
+      `'${GD.ROOT_ID}' in parents and name='${subName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+    const r=await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`,
+      {headers:{Authorization:'Bearer '+GD.token}}).then(r=>r.json());
+
+    if(r.files && r.files.length>0){
+      GD.subFolderId = r.files[0].id;
+      // 查找各設定檔
+      const mf=await gdFindOrCreateFile(GD.ROOT_ID,  GD.MAIN_FILE);
+      const sf=await gdFindOrCreateFile(GD.subFolderId, GD.SETUP_FILE);
+      const cf=await gdFindOrCreateFile(GD.subFolderId, GD.CG_FILE);
+      const wf=await gdFindOrCreateFile(GD.subFolderId, GD.WARD_FILE);
+      GD.fileId          = mf.id;
+      GD.fileIds.setup   = sf.id;
+      GD.fileIds.cg      = cf.id;
+      GD.fileIds.ward    = wf.id;
+      gdStatus(`✅ 已登入 ｜ 📁 ${subName}（子資料夾已存在）`,'#b9f6ca');
+    }else{
+      GD.subFolderId=null;
+      gdStatus(`✅ 已登入 ｜ 子資料夾「${subName}」尚未建立，儲存時自動建立`,'#b9f6ca');
+    }
+    // 更新位置列
+    const ptEl=document.getElementById('gd-loc-path');
+    if(ptEl){ ptEl.textContent=`Google Drive / ${subName}`; ptEl.title=`Google Drive / ${subName}`; }
+  }catch(e){gdStatus('查找 Drive 子資料夾失敗：'+e.message,'#ff8a80');}
+}
+
+/* ── 儲存至 Drive ── */
+async function gdSave(){
+  if(!GD.token){showMsg('請先登入 Google','err');return;}
+  // ★ 驗證機構與單位英文名稱
+  const subName=gdCheckSetup();
+  if(!subName) return;
+
+  const btn=document.getElementById('gd-save-btn');
+  btn.innerHTML='<span class="sync-spin">🔄</span> 儲存中…';
+  btn.disabled=true;
+  try{
+    // 1. 取得或建立子資料夾
+    GD.subFolderId = await gdGetOrCreateSubFolder(subName);
+
+    // 2. 儲存主護理檔案至根資料夾
+    GD.fileId = await gdUploadFile(GD.fileId, GD.ROOT_ID, GD.MAIN_FILE, toXML(DB));
+
+    // 3. 儲存三個設定檔至子資料夾
+    GD.fileIds.setup = await gdUploadFile(GD.fileIds.setup, GD.subFolderId, GD.SETUP_FILE, setupToXML());
+    GD.fileIds.cg    = await gdUploadFile(GD.fileIds.cg,    GD.subFolderId, GD.CG_FILE,    cgToXML());
+    GD.fileIds.ward  = await gdUploadFile(GD.fileIds.ward,  GD.subFolderId, GD.WARD_FILE,  wardToXML());
+
+    const now=new Date().toLocaleString('zh-TW');
+    gdStatus(`☁️ 已儲存 ｜ 📁 ${subName} ｜ ${now}`,'#b9f6ca');
+    // 更新位置列
+    const ptEl=document.getElementById('gd-loc-path');
+    if(ptEl){ ptEl.textContent=`Google Drive / ${subName}`; ptEl.title=`Google Drive / ${subName}`; }
+    showMsg(`✅ 已儲存至 Google Drive / ${subName}`,'ok');
+  }catch(e){
+    gdStatus('❌ 儲存失敗：'+e.message,'#ff8a80');
+    showMsg('Google Drive 儲存失敗：'+e.message,'err');
+  }finally{
+    btn.innerHTML='☁️ 存至 Drive';
+    btn.disabled=false;
+  }
+}
+
+/* ── 從 Drive 讀取 ── */
+async function gdLoad(){
+  if(!GD.token){showMsg('請先登入 Google','err');return;}
+  // ★ 驗證機構與單位英文名稱
+  const subName=gdCheckSetup();
+  if(!subName) return;
+
+  // 確保已找到子資料夾與檔案
+  if(!GD.subFolderId) await gdFindFile();
+  if(!GD.subFolderId){
+    showMsg(`Drive 上尚無「${subName}」子資料夾，請先儲存一次建立基本資料`,'info');
+    return;
+  }
+  if(!confirm(`從 Google Drive / ${subName} 讀取所有設定資料？\n目前設定將被覆蓋。`))return;
+
+  const btn=document.getElementById('gd-load-btn');
+  btn.innerHTML='<span class="sync-spin">🔄</span> 讀取中…';
+  btn.disabled=true;
+  try{
+    let loaded=[], warn=[];
+
+    // 主護理檔案
+    if(GD.fileId){
+      const xml=await gdDownloadFile(GD.fileId);
+      const p=fromXML(xml);
+      if(p!==null){ DB=p; await migrateDB(); await persist(); loaded.push(`${GD.MAIN_FILE}（${DB.length} 筆）`); }
+      else warn.push(GD.MAIN_FILE+' 解析失敗');
+    }
+
+    // Setup.xml
+    const sfInfo=await gdFindOrCreateFile(GD.subFolderId, GD.SETUP_FILE);
+    if(sfInfo.id){ GD.fileIds.setup=sfInfo.id;
+      parseSetupXML(await gdDownloadFile(sfInfo.id)); await persistSetup(); loaded.push(GD.SETUP_FILE); }
+    else warn.push(GD.SETUP_FILE+' 不存在');
+
+    // Caregivers.xml
+    const cfInfo=await gdFindOrCreateFile(GD.subFolderId, GD.CG_FILE);
+    if(cfInfo.id){ GD.fileIds.cg=cfInfo.id;
+      parseCgXML(await gdDownloadFile(cfInfo.id)); await persistCg(); loaded.push(`${GD.CG_FILE}（${CAREGIVERS.length} 人）`); }
+    else warn.push(GD.CG_FILE+' 不存在');
+
+    // Ward.xml
+    const wfInfo=await gdFindOrCreateFile(GD.subFolderId, GD.WARD_FILE);
+    if(wfInfo.id){ GD.fileIds.ward=wfInfo.id;
+      parseWardXML(await gdDownloadFile(wfInfo.id)); await persistWard(); loaded.push(`${GD.WARD_FILE}（${WARDS.length} 房）`); }
+    else warn.push(GD.WARD_FILE+' 不存在');
+
+    // 完整更新所有介面
+    updateAppBarInfo();
+    refreshEmpDropdown();
+    drawCal();
+    const curTab=document.querySelector('.nav-tab.on')?.dataset.t;
+    if(curTab==='rec')   { renderBC(); renderContent(); }
+    if(curTab==='xml')   showXML();
+    if(curTab==='cg')    renderCgList();
+    if(curTab==='ward')  renderWardList();
+    if(curTab==='setup') loadSetupUI();
+
+    const now=new Date().toLocaleString('zh-TW');
+    gdStatus(`📂 已讀取 ｜ 📁 ${subName} ｜ ${now}`,'#b9f6ca');
+    showMsg(warn.length
+      ? `⚠️ 部分讀取：${loaded.join('、')}；缺少：${warn.join('、')}`
+      : `✅ 已從 Drive / ${subName} 讀取：${loaded.join('、')}`
+    , warn.length?'info':'ok');
+  }catch(e){
+    gdStatus('❌ 讀取失敗：'+e.message,'#ff8a80');
+    showMsg('Google Drive 讀取失敗：'+e.message,'err');
+  }finally{
+    btn.innerHTML='📂 從 Drive 讀取';
+    btn.disabled=false;
+  }
+}
+
+/* ═══════════════════════════════════════
+   設定資料庫（三個獨立 XML）
+═══════════════════════════════════════ */
+let SETUP = {
+  hospitalNameEn:'', hospitalNameZh:'',
+  unitNameEn:'', unitNameZh:'',
+  storageFileName:'A13_NursingRecords.xml',
+  storageLocation:''
+};
+let CAREGIVERS = [];  // [{empNo, name, license}]
+let WARDS = [];       // [{wardNo, description}]
+
+/* ── XML 序列化 ── */
+function setupToXML(){
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<setup>\n` +
+    `  <hospitalNameEn>${xe(SETUP.hospitalNameEn)}</hospitalNameEn>\n` +
+    `  <hospitalNameZh>${xe(SETUP.hospitalNameZh)}</hospitalNameZh>\n` +
+    `  <unitNameEn>${xe(SETUP.unitNameEn)}</unitNameEn>\n` +
+    `  <unitNameZh>${xe(SETUP.unitNameZh)}</unitNameZh>\n` +
+    `  <storageFileName>${xe(SETUP.storageFileName)}</storageFileName>\n` +
+    `  <storageLocation>${xe(SETUP.storageLocation)}</storageLocation>\n` +
+    `</setup>`;
+}
+function cgToXML(){
+  let x=`<?xml version="1.0" encoding="UTF-8"?>\n<caregivers>\n`;
+  CAREGIVERS.forEach(c=>{
+    x+=`  <caregiver empNo="${xe(c.empNo)}">\n`;
+    x+=`    <name>${xe(c.name)}</name>\n`;
+    x+=`    <license>${xe(c.license)}</license>\n`;
+    x+=`  </caregiver>\n`;
+  });
+  return x+`</caregivers>`;
+}
+function wardToXML(){
+  let x=`<?xml version="1.0" encoding="UTF-8"?>\n<wards>\n`;
+  WARDS.forEach(w=>{
+    x+=`  <ward wardNo="${xe(w.wardNo)}">\n`;
+    x+=`    <description>${xe(w.description)}</description>\n`;
+    x+=`  </ward>\n`;
+  });
+  return x+`</wards>`;
+}
+
+/* ── XML 解析 ── */
+function parseSetupXML(str){
+  try{
+    const doc=new DOMParser().parseFromString(str,'text/xml');
+    if(doc.querySelector('parsererror'))return;
+    const s=doc.documentElement;
+    SETUP.hospitalNameEn=ct(s,'hospitalNameEn');
+    SETUP.hospitalNameZh=ct(s,'hospitalNameZh');
+    SETUP.unitNameEn=ct(s,'unitNameEn');
+    SETUP.unitNameZh=ct(s,'unitNameZh');
+    SETUP.storageFileName=ct(s,'storageFileName')||'A13_NursingRecords.xml';
+    SETUP.storageLocation=ct(s,'storageLocation');
+  }catch(e){console.error('parseSetupXML:',e);}
+}
+function parseCgXML(str){
+  try{
+    const doc=new DOMParser().parseFromString(str,'text/xml');
+    if(doc.querySelector('parsererror'))return;
+    CAREGIVERS=cels(doc.documentElement,'caregiver').map(c=>({
+      empNo:c.getAttribute('empNo')||'',
+      name:ct(c,'name'),
+      license:ct(c,'license')
+    }));
+  }catch(e){console.error('parseCgXML:',e);}
+}
+function parseWardXML(str){
+  try{
+    const doc=new DOMParser().parseFromString(str,'text/xml');
+    if(doc.querySelector('parsererror'))return;
+    WARDS=cels(doc.documentElement,'ward').map(w=>({
+      wardNo:w.getAttribute('wardNo')||'',
+      description:ct(w,'description')
+    }));
+  }catch(e){console.error('parseWardXML:',e);}
+}
+
+/* ── 持久化存取 ── */
+async function loadSettings(){
+  try{const r=await window.storage.get('a13_setup');if(r?.value)parseSetupXML(r.value);}catch{}
+  try{const r=await window.storage.get('a13_cg');if(r?.value)parseCgXML(r.value);}catch{}
+  try{const r=await window.storage.get('a13_ward');if(r?.value)parseWardXML(r.value);}catch{}
+  // localStorage 備份讀取
+  try{if(!CAREGIVERS.length){const b=localStorage.getItem('a13_cg_bak');if(b)parseCgXML(b);}}catch{}
+  try{if(!WARDS.length){const b=localStorage.getItem('a13_ward_bak');if(b)parseWardXML(b);}}catch{}
+}
+async function persistSetup(){
+  const x=setupToXML();
+  try{await window.storage.set('a13_setup',x);}catch{}
+  try{localStorage.setItem('a13_setup_bak',x);}catch{}
+}
+async function persistCg(){
+  const x=cgToXML();
+  try{await window.storage.set('a13_cg',x);}catch{}
+  try{localStorage.setItem('a13_cg_bak',x);}catch{}
+}
+async function persistWard(){
+  const x=wardToXML();
+  try{await window.storage.set('a13_ward',x);}catch{}
+  try{localStorage.setItem('a13_ward_bak',x);}catch{}
+}
+
+/* ── 單一匯出 ── */
+function exportSingleXML(type){ mobileExport(type); }
+
+/* ════════════════════
+   Setup 介面
+════════════════════ */
+function loadSetupUI(){
+  document.getElementById('su-hn-en').value=SETUP.hospitalNameEn||'';
+  document.getElementById('su-hn-zh').value=SETUP.hospitalNameZh||'';
+  document.getElementById('su-un-en').value=SETUP.unitNameEn||'';
+  document.getElementById('su-un-zh').value=SETUP.unitNameZh||'';
+  document.getElementById('su-fname').value=SETUP.storageFileName||'A13_NursingRecords.xml';
+  document.getElementById('su-floc').value=SETUP.storageLocation||'';
+  refreshSetupPreview(); // 預覽顯示當前 SETUP 物件的值
+}
+function refreshSetupPreview(){
+  const xml=setupToXML();
+  document.getElementById('su-xml-preview').textContent=xml;
+}
+async function saveSetup(){
+  SETUP.hospitalNameEn=v('su-hn-en');
+  SETUP.hospitalNameZh=v('su-hn-zh');
+  SETUP.unitNameEn=v('su-un-en');
+  SETUP.unitNameZh=v('su-un-zh');
+  SETUP.storageFileName=v('su-fname')||'A13_NursingRecords.xml';
+  SETUP.storageLocation=v('su-floc');
+  await persistSetup();
+  refreshSetupPreview();
+  updateAppBarInfo(); // 同時更新位置列
+  showMsg('系統設定已儲存','ok');
+}
+function updateAppBarInfo(){
+  const sub=document.querySelector('.app-bar small');
+  if(sub&&SETUP.unitNameZh){
+    sub.textContent=`${SETUP.hospitalNameZh||''} ${SETUP.unitNameZh||''} · XML 格式持久化儲存`;
+  }
+  refreshLocationBar();
+}
+
+/* 更新藍色工具列的儲存位置顯示（永遠可見）*/
+function refreshLocationBar(){
+  const fnEl=document.getElementById('gd-loc-fname');
+  const ptEl=document.getElementById('gd-loc-path');
+  if(!fnEl||!ptEl) return;
+  const fname = SETUP.storageFileName || 'A13_NursingRecords.xml';
+  const loc   = SETUP.storageLocation || 'Google Drive';
+  fnEl.textContent = fname;
+  fnEl.title = fname;
+  ptEl.textContent = loc;
+  ptEl.title = loc;
+}
+
+/* ════════════════════
+   Caregivers 介面
+════════════════════ */
+let editCgId=null;
+
+function renderCgList(){
+  const el=document.getElementById('cg-list');
+  if(!CAREGIVERS.length){
+    el.innerHTML=`<div class="empty"><div class="icon">👩‍⚕️</div><div>尚無照護人員資料</div></div>`;
+    return;
+  }
+  // 表格
+  let h=`<div style="overflow-x:auto"><table class="det det-met" style="width:100%">
+    <thead><tr>
+      <th style="background:var(--met-h)">員編</th>
+      <th style="background:var(--met-h)">姓名</th>
+      <th style="background:var(--met-h)">技術士證照</th>
+      <th style="background:var(--met-h)">操作</th>
+    </tr></thead><tbody>`;
+  CAREGIVERS.forEach((c,i)=>{
+    h+=`<tr>
+      <td style="font-family:monospace;font-weight:700">${c.empNo}</td>
+      <td><b>${c.name}</b></td>
+      <td>${c.license||'—'}</td>
+      <td>
+        <button type="button" class="btn btn-met btn-xs" onclick="openCgForm(${i})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delCg(${i})">🗑</button>
+      </td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  el.innerHTML=h;
+}
+
+function openCgForm(idx){
+  editCgId=(idx!==undefined&&idx!==null)?idx:null;
+  const c=(editCgId!==null)?CAREGIVERS[editCgId]:null;
+  document.getElementById('cg-form-title').textContent=c?'修改照護人員':'新增照護人員';
+  const empEl=document.getElementById('cg-emp');
+  empEl.value=c?.empNo||'';
+  empEl.readOnly=!!c; // 修改時員編不可改
+  empEl.style.background=c?'#f5f5f5':'';
+  document.getElementById('cg-name').value=c?.name||'';
+  document.getElementById('cg-lic').value=c?.license||'';
+  document.getElementById('cg-id-preview').textContent=c?.empNo||'—';
+  openOv('ov-cg');
+}
+async function saveCg(){
+  const empNo=v('cg-emp').trim().toUpperCase();
+  const name=v('cg-name').trim();
+  if(!empNo){showMsg('請填入員編','err');return;}
+  if(!name){showMsg('請填入姓名','err');return;}
+  const license=v('cg-lic');
+  if(editCgId!==null){
+    CAREGIVERS[editCgId]={empNo,name,license};
+    showMsg(`人員 ${empNo} ${name} 已更新`,'ok');
+  }else{
+    if(CAREGIVERS.find(c=>c.empNo===empNo)){showMsg('此員編已存在','err');return;}
+    CAREGIVERS.push({empNo,name,license});
+    showMsg(`人員 ${empNo} ${name} 已新增`,'ok');
+  }
+  await persistCg();
+  closeOv('ov-cg');
+  renderCgList();
+  refreshEmpDropdown(); // 更新主檔表單下拉
+}
+async function delCg(idx){
+  const c=CAREGIVERS[idx];
+  if(!confirm(`確定刪除 ${c.empNo} ${c.name}？`))return;
+  CAREGIVERS.splice(idx,1);
+  await persistCg();
+  renderCgList();
+  refreshEmpDropdown();
+  showMsg(`人員 ${c.name} 已刪除`,'ok');
+}
+
+/* ── 主檔表單員編下拉 ── */
+function refreshEmpDropdown(){
+  const sel=document.getElementById('rf-emp');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">-- 選擇員編 --</option>';
+  if(!CAREGIVERS.length){
+    const o=document.createElement('option');
+    o.disabled=true;
+    o.text='（尚無照護人員資料，請先至「👩‍⚕️照護人員」頁籤新增）';
+    sel.appendChild(o);
+  } else {
+    CAREGIVERS.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c.empNo;
+      o.text=`${c.empNo} — ${c.name}${c.license?' ('+c.license+')':''}`;
+      sel.appendChild(o);
+    });
+  }
+  if(cur) sel.value=cur;
+}
+function fillNurseFromEmp(){
+  const empNo=v('rf-emp');
+  const cg=CAREGIVERS.find(c=>c.empNo===empNo);
+  document.getElementById('rf-nm').value=cg?.name||'';
+  // 若單位欄空白，自動帶入 Setup 的單位中文名稱
+  if(!v('rf-unit')&&SETUP.unitNameZh){
+    document.getElementById('rf-unit').value=SETUP.unitNameZh;
+  }
+}
+
+/* ════════════════════
+   Ward 介面
+════════════════════ */
+let editWardId=null;
+
+function renderWardList(){
+  const el=document.getElementById('ward-list');
+  if(!WARDS.length){
+    el.innerHTML=`<div class="empty"><div class="icon">🛏</div><div>尚無病房資料</div></div>`;
+    return;
+  }
+  let h=`<div style="overflow-x:auto"><table class="det det-out" style="width:100%">
+    <thead><tr>
+      <th style="background:var(--out-h)">病房編號</th>
+      <th style="background:var(--out-h)">病房說明（個資保護）</th>
+      <th style="background:var(--out-h)">操作</th>
+    </tr></thead><tbody>`;
+  WARDS.forEach((w,i)=>{
+    h+=`<tr>
+      <td style="font-family:monospace;font-weight:700">${w.wardNo}</td>
+      <td>${w.description||'—'}</td>
+      <td>
+        <button type="button" class="btn btn-out btn-xs" onclick="openWardForm(${i})">✏️</button>
+        <button type="button" class="btn btn-red btn-xs" onclick="delWard(${i})">🗑</button>
+      </td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>
+  <div style="margin-top:10px;padding:9px;background:#fff9c4;border-radius:6px;font-size:13px;color:#e65100">
+    🔒 個資保護：病房說明欄不應包含病患姓名、身分證字號等個人識別資訊。
+  </div>`;
+  el.innerHTML=h;
+}
+
+function openWardForm(idx){
+  editWardId=(idx!==undefined&&idx!==null)?idx:null;
+  const w=(editWardId!==null)?WARDS[editWardId]:null;
+  document.getElementById('ward-form-title').textContent=w?'修改病房':'新增病房';
+  const noEl=document.getElementById('wd-no');
+  noEl.value=w?.wardNo||'';
+  noEl.readOnly=!!w;
+  noEl.style.background=w?'#f5f5f5':'';
+  document.getElementById('wd-desc').value=w?.description||'';
+  document.getElementById('ward-id-preview').textContent=w?.wardNo||'—';
+  openOv('ov-ward');
+}
+async function saveWard(){
+  const wardNo=v('wd-no').trim();
+  if(!wardNo){showMsg('請填入病房編號','err');return;}
+  const description=v('wd-desc').trim();
+  if(editWardId!==null){
+    WARDS[editWardId]={wardNo,description};
+    showMsg(`病房 ${wardNo} 已更新`,'ok');
+  }else{
+    if(WARDS.find(w=>w.wardNo===wardNo)){showMsg('此病房編號已存在','err');return;}
+    WARDS.push({wardNo,description});
+    showMsg(`病房 ${wardNo} 已新增`,'ok');
+  }
+  await persistWard();
+  closeOv('ov-ward');
+  renderWardList();
+}
+async function delWard(idx){
+  const w=WARDS[idx];
+  if(!confirm(`確定刪除病房 ${w.wardNo}？`))return;
+  WARDS.splice(idx,1);
+  await persistWard();
+  renderWardList();
+  showMsg(`病房 ${w.wardNo} 已刪除`,'ok');
+}
+
+/* ═══════════════════════════════════════
+   本機資料夾同步（File System Access API）
+   支援 Chrome / Edge 86+
+   四個 XML 與 HTML 放在同一資料夾
+═══════════════════════════════════════ */
+const FS = {
+  dirHandle : null,   // 已選定的資料夾句柄
+  FILES : {
+    main  : 'A13_NursingRecords.xml',
+    setup : 'Setup.xml',
+    cg    : 'Caregivers.xml',
+    ward  : 'Ward.xml'
+  }
+};
+
+function fsSupported(){
+  return ('showDirectoryPicker' in window);
+}
+
+/* 偵測是否為行動裝置 */
+function isMobileDevice(){
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    || ('ontouchstart' in window && !fsSupported());
+}
+
+function fsInit(){
+  const note    = document.getElementById('fs-support-note');
+  const status  = document.getElementById('fs-status');
+  const desktop = document.getElementById('fs-desktop-area');
+  const mobile  = document.getElementById('fs-mobile-area');
+  const title   = document.getElementById('fs-row-title');
+
+  if(isMobileDevice() || !fsSupported()){
+    // ── 手機模式 ──
+    desktop.style.display = 'none';
+    mobile.style.display  = 'flex';
+    title.textContent     = '📱 本機 XML 下載 / 上傳';
+    status.textContent    = '手機模式：可個別下載或上傳 XML 檔案';
+    if(note) note.textContent = '（下載後存於手機下載資料夾）';
+  } else {
+    // ── 桌機模式 ──
+    desktop.style.display = 'flex';
+    mobile.style.display  = 'none';
+    title.textContent     = '🗂 本機資料夾同步';
+    const savedName = localStorage.getItem('fs_dir_name');
+    status.textContent = savedName
+      ? `上次資料夾：${savedName}（請重新選擇以恢復連接）`
+      : '尚未選擇本機資料夾';
+    if(note) note.textContent = '';
+  }
+}
+
+/* ════════════════════
+   手機模式：匯出（下載）
+════════════════════ */
+function mobileExport(type){
+  let content='', fname='';
+  if(type==='main')  { content=toXML(DB);      fname=GD.MAIN_FILE||'A13_NursingRecords.xml'; }
+  if(type==='setup') { content=setupToXML();   fname='Setup.xml'; }
+  if(type==='cg')    { content=cgToXML();      fname='Caregivers.xml'; }
+  if(type==='ward')  { content=wardToXML();    fname='Ward.xml'; }
+
+  const blob=new Blob([content],{type:'application/xml'});
+  const url=URL.createObjectURL(blob);
+
+  // iOS Safari 需要用 window.open
+  if(/iPhone|iPad|iPod/i.test(navigator.userAgent)){
+    const w=window.open('','_blank');
+    if(w){
+      w.document.write(`<pre>${content.replace(/</g,'&lt;')}</pre>`);
+      w.document.title=fname;
+      w.document.close();
+      showMsg(`📄 ${fname} 已開啟於新頁，請長按儲存或複製`, 'info');
+    } else {
+      // fallback：直接 a.click
+      const a=document.createElement('a');
+      a.href=url; a.download=fname; a.click();
+    }
+  } else {
+    // Android / 桌機
+    const a=document.createElement('a');
+    a.href=url; a.download=fname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    showMsg(`⬇ ${fname} 已下載至裝置`, 'ok');
+  }
+  setTimeout(()=>URL.revokeObjectURL(url), 3000);
+}
+
+/* ════════════════════
+   手機模式：匯入（上傳）
+   支援同時選多個 XML 檔案
+════════════════════ */
+async function mobileImport(input){
+  const files=Array.from(input.files);
+  if(!files.length) return;
+  let loaded=[], warn=[];
+
+  for(const file of files){
+    const text=await file.text();
+    const name=file.name.toLowerCase();
+
+    if(name==='a13_nursingrecords.xml' || name.includes('nursing')){
+      const p=fromXML(text);
+      if(p!==null){ DB=p; await migrateDB(); await persist();
+        loaded.push(`${file.name}（${DB.length} 筆主檔）`);
+      } else warn.push(file.name+'解析失敗');
+    } else if(name==='setup.xml'){
+      parseSetupXML(text); await persistSetup(); loaded.push('Setup.xml');
+    } else if(name==='caregivers.xml'){
+      parseCgXML(text); await persistCg();
+      loaded.push(`Caregivers.xml（${CAREGIVERS.length} 人）`);
+    } else if(name==='ward.xml'){
+      parseWardXML(text); await persistWard();
+      loaded.push(`Ward.xml（${WARDS.length} 房）`);
+    } else {
+      warn.push(`${file.name}：不認識的檔名`);
+    }
+  }
+
+  // 更新介面
+  updateAppBarInfo();
+  refreshEmpDropdown();
+  drawCal();
+  const curTab=document.querySelector('.nav-tab.on')?.dataset.t;
+  if(curTab==='rec')   { renderBC(); renderContent(); }
+  if(curTab==='xml')   showXML();
+  if(curTab==='cg')    renderCgList();
+  if(curTab==='ward')  renderWardList();
+  if(curTab==='setup') loadSetupUI();
+
+  document.getElementById('fs-status').textContent=
+    `📥 已匯入 ${loaded.length} 個檔案`;
+
+  showMsg(warn.length
+    ? `⚠️ 匯入：${loaded.join('、')}；問題：${warn.join('、')}`
+    : `✅ 已匯入：${loaded.join('、')}`
+  , warn.length?'info':'ok');
+
+  // 清空 input 讓下次可再選同一檔案
+  input.value='';
+}
+
+/* 選擇資料夾 */
+async function fsPick(){
+  if(!fsSupported()){showMsg('本瀏覽器不支援本機資料夾，請使用 Chrome / Edge','err');return;}
+  try{
+    FS.dirHandle = await window.showDirectoryPicker({mode:'readwrite'});
+    const name=FS.dirHandle.name;
+    localStorage.setItem('fs_dir_name', name);
+    document.getElementById('fs-status').textContent=`✅ 已選定：${name}`;
+    document.getElementById('fs-save-btn').disabled=false;
+    document.getElementById('fs-load-btn').disabled=false;
+    // 更新儲存位置顯示
+    const ptEl=document.getElementById('gd-loc-path');
+    if(ptEl){
+      ptEl.textContent=`本機資料夾：${name}`;
+      ptEl.title=`本機資料夾：${name}`;
+    }
+    showMsg(`已選定資料夾「${name}」，可開始讀寫 XML 檔案`,'ok');
+  }catch(e){
+    if(e.name!=='AbortError') showMsg('選擇資料夾失敗：'+e.message,'err');
+  }
+}
+
+/* 寫入單一 XML 檔 */
+async function fsWriteFile(filename, content){
+  if(!FS.dirHandle) throw new Error('尚未選擇資料夾');
+  const fh=await FS.dirHandle.getFileHandle(filename,{create:true});
+  const w=await fh.createWritable();
+  await w.write(content);
+  await w.close();
+}
+
+/* 讀取單一 XML 檔 */
+async function fsReadFile(filename){
+  if(!FS.dirHandle) throw new Error('尚未選擇資料夾');
+  try{
+    const fh=await FS.dirHandle.getFileHandle(filename);
+    const f=await fh.getFile();
+    return await f.text();
+  }catch(e){
+    if(e.name==='NotFoundError') return null; // 檔案不存在
+    throw e;
+  }
+}
+
+/* 儲存全部四個 XML 至資料夾 */
+async function fsSaveAll(){
+  if(!FS.dirHandle){showMsg('請先選擇資料夾','err');return;}
+  const btn=document.getElementById('fs-save-btn');
+  btn.innerHTML='<span class="sync-spin">🔄</span> 儲存中…';
+  btn.disabled=true;
+  try{
+    await fsWriteFile(FS.FILES.main,   toXML(DB));
+    await fsWriteFile(FS.FILES.setup,  setupToXML());
+    await fsWriteFile(FS.FILES.cg,     cgToXML());
+    await fsWriteFile(FS.FILES.ward,   wardToXML());
+    const now=new Date().toLocaleString('zh-TW');
+    document.getElementById('fs-status').textContent=
+      `✅ 已儲存至「${FS.dirHandle.name}」 ｜ ${now}`;
+    showMsg(`✅ 四個 XML 已全部儲存至資料夾「${FS.dirHandle.name}」`,'ok');
+  }catch(e){
+    showMsg('儲存失敗：'+e.message,'err');
+  }finally{
+    btn.innerHTML='💾 存至資料夾';btn.disabled=false;
+  }
+}
+
+/* 從資料夾讀取全部四個 XML */
+async function fsLoadAll(){
+  if(!FS.dirHandle){showMsg('請先選擇資料夾','err');return;}
+  if(!confirm(`從資料夾「${FS.dirHandle.name}」讀取所有 XML？\n目前資料將被覆蓋。`))return;
+  const btn=document.getElementById('fs-load-btn');
+  btn.innerHTML='<span class="sync-spin">🔄</span> 讀取中…';
+  btn.disabled=true;
+  try{
+    let loaded=[], warn=[];
+
+    // ── 主資料 ──
+    const mainXml=await fsReadFile(FS.FILES.main);
+    if(mainXml){
+      const p=fromXML(mainXml);
+      if(p!==null){
+        DB=p;
+        await migrateDB();
+        await persist();
+        loaded.push(`A13_NursingRecords.xml（${DB.length} 筆主檔）`);
+      } else { warn.push('A13_NursingRecords.xml 解析失敗'); }
+    } else { warn.push('找不到 A13_NursingRecords.xml'); }
+
+    // ── Setup ──
+    const setupXml=await fsReadFile(FS.FILES.setup);
+    if(setupXml){
+      parseSetupXML(setupXml);
+      await persistSetup();
+      loaded.push('Setup.xml');
+    }
+
+    // ── Caregivers ──
+    const cgXml=await fsReadFile(FS.FILES.cg);
+    if(cgXml){
+      parseCgXML(cgXml);
+      await persistCg();
+      loaded.push(`Caregivers.xml（${CAREGIVERS.length} 人）`);
+    }
+
+    // ── Ward ──
+    const wardXml=await fsReadFile(FS.FILES.ward);
+    if(wardXml){
+      parseWardXML(wardXml);
+      await persistWard();
+      loaded.push(`Ward.xml（${WARDS.length} 房）`);
+    }
+
+    // ── 完整更新所有介面 ──
+    updateAppBarInfo();       // 頁首、位置列
+    refreshEmpDropdown();     // 員編下拉
+    drawCal();                // 月曆（橘點）
+
+    // 重新渲染目前所在頁面
+    const curTab=document.querySelector('.nav-tab.on')?.dataset.t;
+    if(curTab==='setup') loadSetupUI();
+    if(curTab==='cg')    renderCgList();
+    if(curTab==='ward')  renderWardList();
+    if(curTab==='rec')   { renderBC(); renderContent(); }
+    if(curTab==='xml')   showXML();
+
+    const now=new Date().toLocaleString('zh-TW');
+    document.getElementById('fs-status').textContent=
+      `✅ 已讀取 ${loaded.length} 個檔案 ｜ ${now}`;
+
+    let msg=`✅ 已從「${FS.dirHandle.name}」讀取：\n${loaded.join('\n')}`;
+    if(warn.length) msg+=`\n⚠️ 注意：${warn.join('、')}`;
+    showMsg(warn.length>0?msg:`✅ 已讀取 ${loaded.join('、')}`
+      ,warn.length?'info':'ok');
+
+  }catch(e){
+    showMsg('讀取失敗：'+e.message,'err');
+    console.error('fsLoadAll error:',e);
+  }finally{
+    btn.innerHTML='📥 從資料夾讀取';btn.disabled=false;
+  }
 }
 
 async function init(){
   const now=new Date();
   calY=now.getFullYear();calM=now.getMonth();
   S.date=td2s(now);
+  // ★ 最先執行：先顯示預設位置，讓使用者一進來就看到
+  refreshLocationBar();
+  fsInit(); // 初始化本機資料夾功能
   await load();
+  await migrateDB();
+  await loadSettings(); // 載入三個設定 XML（載入後自動更新位置列）
+  updateAppBarInfo();
+  refreshEmpDropdown();
   drawCal();
   fillQBeds();
   fillBedSelect();
