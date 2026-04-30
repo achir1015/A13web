@@ -87,13 +87,20 @@ A13 護理紀錄系統 完整功能總覽
 
 系統運作於
 achir1015.github.io/A13web/ 🚀
+
 現在 Google Drive 的目錄結構已完整：
 📁 根資料夾（1KaFaTW_YDupDZ2JpMuxHMu77fBVgXv2d）
+
  ├── A13_NursingRecords.xml
+ 
  └── 📁 Taipei City Hospital Zhongxiao Branch-Respiratory Care Ward/
+ 
       ├── Setup.xml
+      
       ├── Caregivers.xml
+      
       └── Ward.xml
+      
 
 目前系統完整儲存架構
 儲存方式用途🌐 瀏覽器 window.storage即時快取，自動儲存💾 localStorage 備份防止 storage 失效的第二道保護🗂 本機資料夾與 HTML 同位置，支援 Git 同步☁️ Google Drive 根目錄護理主檔備份☁️ Google Drive 子資料夾機構設定、人員、病房基本資料共用
