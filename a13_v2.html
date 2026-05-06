@@ -599,14 +599,50 @@ html.m .id-badge{font-size:14px}
       <div class="card-hdr" style="background:var(--c0)">🏥 機構與儲存設定</div>
       <div class="card-body">
         <div class="fgrid" style="margin-bottom:14px">
-          <div class="fgroup"><label>機構英文名稱</label>
-            <input type="text" id="su-hn-en" placeholder="Taipei City Hospital Zhongxiao Branch"></div>
-          <div class="fgroup"><label>機構中文名稱</label>
-            <input type="text" id="su-hn-zh" placeholder="臺北市立聯合醫院忠孝院區"></div>
-          <div class="fgroup"><label>單位英文名稱</label>
-            <input type="text" id="su-un-en" placeholder="Respiratory Care Ward"></div>
-          <div class="fgroup"><label>單位中文名稱</label>
-            <input type="text" id="su-un-zh" placeholder="呼吸照護病房"></div>
+          <!-- 機構英文名稱：下拉快選 + 自由輸入，主控連動 -->
+          <div class="fgroup">
+            <label>機構英文名稱 *</label>
+            <select id="su-hn-en-sel" onchange="suSel('hn-en')" style="margin-bottom:4px">
+              <option value="">-- 快速選擇 --</option>
+              <option value="Taipei City Hospital Zhongxiao Branch">Taipei City Hospital Zhongxiao Branch</option>
+              <option value="Test">Test</option>
+              <option value="1">1</option>
+            </select>
+            <input type="text" id="su-hn-en" placeholder="或直接輸入機構英文名稱">
+          </div>
+          <!-- 機構中文名稱 -->
+          <div class="fgroup">
+            <label>機構中文名稱</label>
+            <select id="su-hn-zh-sel" onchange="suSel('hn-zh')" style="margin-bottom:4px">
+              <option value="">-- 快速選擇 --</option>
+              <option value="臺北市立聯合醫院忠孝院區">臺北市立聯合醫院忠孝院區</option>
+              <option value="測試">測試</option>
+              <option value="1">1</option>
+            </select>
+            <input type="text" id="su-hn-zh" placeholder="或直接輸入機構中文名稱">
+          </div>
+          <!-- 單位英文名稱 -->
+          <div class="fgroup">
+            <label>單位英文名稱 *</label>
+            <select id="su-un-en-sel" onchange="suSel('un-en')" style="margin-bottom:4px">
+              <option value="">-- 快速選擇 --</option>
+              <option value="Respiratory Care Ward">Respiratory Care Ward</option>
+              <option value="Test">Test</option>
+              <option value="1">1</option>
+            </select>
+            <input type="text" id="su-un-en" placeholder="或直接輸入單位英文名稱">
+          </div>
+          <!-- 單位中文名稱 -->
+          <div class="fgroup">
+            <label>單位中文名稱</label>
+            <select id="su-un-zh-sel" onchange="suSel('un-zh')" style="margin-bottom:4px">
+              <option value="">-- 快速選擇 --</option>
+              <option value="呼吸照護病房">呼吸照護病房</option>
+              <option value="測試">測試</option>
+              <option value="1">1</option>
+            </select>
+            <input type="text" id="su-un-zh" placeholder="或直接輸入單位中文名稱">
+          </div>
           <div class="fgroup"><label>照護儲存檔名</label>
             <input type="text" id="su-fname" placeholder="A13_NursingRecords.xml"></div>
           <div class="fgroup"><label>資料存放位置說明</label>
@@ -2670,6 +2706,51 @@ function exportSingleXML(type){ mobileExport(type); }
 /* ════════════════════
    Setup 介面
 ════════════════════ */
+/* ════════════════════
+   Setup 下拉快選連動
+════════════════════ */
+// 各欄位預設選項（索引對應）
+const SU_PRESETS = {
+  'hn-en': ['Taipei City Hospital Zhongxiao Branch', 'Test', '1'],
+  'hn-zh': ['臺北市立聯合醫院忠孝院區',               '測試',  '1'],
+  'un-en': ['Respiratory Care Ward',                   'Test', '1'],
+  'un-zh': ['呼吸照護病房',                             '測試',  '1'],
+};
+const SU_FIELDS = ['hn-en','hn-zh','un-en','un-zh'];
+
+/* 下拉選單變更時 */
+function suSel(field){
+  const sel = document.getElementById('su-'+field+'-sel');
+  const inp = document.getElementById('su-'+field);
+  const val = sel.value;
+
+  // 將選取值帶入文字欄
+  if(val) inp.value = val;
+
+  // 若是「機構英文名稱」改變 → 所有欄位連動至相同索引
+  if(field === 'hn-en' && val){
+    const idx = SU_PRESETS['hn-en'].indexOf(val);
+    if(idx >= 0){
+      SU_FIELDS.filter(f=>f!=='hn-en').forEach(f=>{
+        const preset = SU_PRESETS[f][idx];
+        document.getElementById('su-'+f+'-sel').value = preset;
+        document.getElementById('su-'+f).value        = preset;
+      });
+    }
+  }
+}
+
+/* 同步下拉狀態（與文字欄位對齊）*/
+function suSyncSels(){
+  SU_FIELDS.forEach(f=>{
+    const cur = document.getElementById('su-'+f)?.value || '';
+    const sel = document.getElementById('su-'+f+'-sel');
+    if(!sel) return;
+    // 若目前值在預設清單中，選中該項；否則顯示「-- 快速選擇 --」
+    const opts = SU_PRESETS[f];
+    sel.value = opts.includes(cur) ? cur : '';
+  });
+}
 function loadSetupUI(){
   document.getElementById('su-hn-en').value=SETUP.hospitalNameEn||'';
   document.getElementById('su-hn-zh').value=SETUP.hospitalNameZh||'';
@@ -2677,7 +2758,8 @@ function loadSetupUI(){
   document.getElementById('su-un-zh').value=SETUP.unitNameZh||'';
   document.getElementById('su-fname').value=SETUP.storageFileName||'A13_NursingRecords.xml';
   document.getElementById('su-floc').value=SETUP.storageLocation||'';
-  refreshSetupPreview(); // 預覽顯示當前 SETUP 物件的值
+  suSyncSels();        // 同步下拉選單狀態
+  refreshSetupPreview();
 }
 function refreshSetupPreview(){
   const xml=setupToXML();
